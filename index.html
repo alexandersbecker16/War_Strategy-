@@ -86,7 +86,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .bar i{display:block;height:100%}
 .slider{display:grid;grid-template-columns:78px 1fr 44px;gap:10px;align-items:center;margin:8px 0}
 .slider span{font:600 11px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-input[type=range]{width:100%;accent-color:var(--amber)}
+input[type=range]{width:100%;accent-color:var(--amber);height:28px;touch-action:pan-y;cursor:pointer}
 .chk{display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:13px}
 .chk input{margin-top:3px;accent-color:var(--amber)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px}
@@ -482,8 +482,24 @@ function smartSplit(c,state){const w=wealthRatio(c),t=troopEff(c);
 function allianceState(a){let war=false;for(const k in G.wars){const [x,y]=k.split('|').map(Number);if(x===a||y===a){war=true;break}}return war?'war':'peace'}
 function polOf(c){const a=G.alliances[c.alliance];
   if(isAI(c.alliance))return c.policy||a.policy;
+  if(c.ownPol)return{...c.ownPol,conv:a.policy.conv};                          // your own budget for this one nation
   if(G.tailor!==false){const p=smartSplit(c,allianceState(c.alliance));p.conv=a.policy.conv;return p}  // your nations: tailored to population and wealth
   return a.policy}
+// weapons program: troops raised per point of science (richer economies build more per point)
+function convRate(c,avgInc){const E=ECOND(),X=NE(c);const inc=c.lastIncome||c.income*.1;
+  return 45*clamp(inc/Math.max(.01,avgInc||G.avgInc||1),.3,3)*E.milConv*X.milConv}
+const SCI_FLOOR=1.5,CONV_NOW=.15;   // science can't drop below the floor; "Convert now" spends 15% of the stock once a month
+const convNowAmt=c=>Math.max(0,Math.min(c.sci-SCI_FLOOR,c.sci*CONV_NOW));
+function convertNow(c){if(!c.alive||c.convTurn===G.turn)return 0;const d=convNowAmt(c);if(d<=.001)return 0;
+  const gain=d*convRate(c);c.sci-=d;c.army+=gain;c.convTurn=G.turn;return gain}
+// total wealth: a year of output plus the capital stock of the home economy
+const totalWealth=c=>(c.lastIncome||c.income*.1)*12+c.econ*.5;
+function fmtMoney(n){return n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'k':n>=100?Math.round(n).toString():n.toFixed(1)}
+// keep three budget shares summing to 100: set one, rescale the other two to fill the rest
+function rebalance(p,key,v){const o=['mil','eco','sci'].filter(k=>k!==key);v=clamp(Math.round(v),0,100);const rest=100-v;
+  const t=(p[o[0]]||0)+(p[o[1]]||0);let a=t>0?Math.round(rest*(p[o[0]]||0)/t):Math.round(rest/2);
+  return{...p,[key]:v,[o[0]]:a,[o[1]]:rest-a}}
+function normPol(p){const s=Math.max(1,p.mil+p.eco+p.sci);const m=Math.round(p.mil/s*100),e=Math.round(p.eco/s*100);return{...p,mil:m,eco:e,sci:100-m-e}}
 const morale=c=>.5+.5*Math.min(1,c.cells/Math.max(1,c.origCells)); // shrinking nations lose heart
 const pw=c=>Math.max(0,c.army)*tm(c)*morale(c);
 const alliancePower=a=>members(a).reduce((s,c)=>s+pw(c),0);
@@ -540,7 +556,7 @@ function step(){
     c.army+=mB*E.milConv*X.milConv*K.troop*troopEff(c)-c.army*K.upkeep;
     // weapons program: turn up to 4% of the science stock per month into troops (scaled by the nation's economic weight)
     c.lastConv=0;const conv=(al.policy.conv||0)/100;
-    if(conv>0&&c.sci>1.5){const d=Math.min(c.sci-1.5,c.sci*.04*conv);const gain=d*45*clamp(income/avgInc,.3,3)*E.milConv*X.milConv;c.sci-=d;c.army+=gain;c.lastConv=gain}
+    if(conv>0&&c.sci>SCI_FLOOR){const d=Math.min(c.sci-SCI_FLOOR,c.sci*.04*conv);const gain=d*convRate(c,avgInc);c.sci-=d;c.army+=gain;c.lastConv=gain}
     c.econ*=1+K.growth*eB*E.growth*X.growth*reg.grow;                     // grows by its own size, not the empire's
     c.lastResearch=sB*E.sciRate*X.sciRate/(K.R0*(1+K.Rs*c.sci));
     c.sci+=c.lastResearch;
@@ -1086,8 +1102,14 @@ function refreshUI(){
 }
 function updateClock(){const left=G.settings.len*60000-G.elapsed;$('#hClock').textContent=fmtClock(left)+' left';$('#hClockWrap').classList.toggle('warn',left<5*60000)}
 
+let dragging=null;   // the range slider the player is holding right now
+addEventListener('pointerdown',e=>{if(e.target.matches&&e.target.matches('input[type=range]'))dragging=e.target},true);
+addEventListener('touchstart',e=>{if(e.target.matches&&e.target.matches('input[type=range]'))dragging=e.target},{capture:true,passive:true});
+['pointerup','pointercancel','touchend','touchcancel'].forEach(t=>addEventListener(t,()=>{if(dragging){const d=dragging;setTimeout(()=>{if(dragging===d)dragging=null},150)}},true));
+const holding=el=>{const ae=document.activeElement;return(dragging&&el.contains(dragging))||(ae&&ae.matches&&ae.matches('input[type=range]')&&el.contains(ae))};
 function renderPanel(){
   if(!G||!G.started)return;const el=$('#game');
+  if(tab==='intel'&&holding(el))return;  // don't rebuild while a budget slider is held
   if(tab==='command')renderCommand(el);else if(tab==='intel')renderIntel(el);else if(tab==='world')renderWorld(el);else if(tab==='log')renderLogTab(el);else renderGuide(el);
 }
 function renderCommand(el){
@@ -1102,18 +1124,28 @@ function renderCommand(el){
       <div class="slider"><span>Military</span><input type="range" id="pMil" min="0" max="100"><b class="mono" id="vMil"></b></div>
       <div class="slider"><span>Economy</span><input type="range" id="pEco" min="0" max="100"><b class="mono" id="vEco"></b></div>
       <div class="slider"><span>Science</span><input type="range" id="pSci" min="0" max="100"><b class="mono" id="vSci"></b></div>
-      <p class="muted small">Military buys and maintains troops (each troop costs upkeep). Science makes every troop stronger. Economy grows the income that pays for both.</p>
+      <p class="muted small">The three sliders always add up to 100%: raising one takes from the other two. Military buys and maintains troops (each troop costs upkeep). Science makes every troop stronger. Economy grows the income that pays for both. To give one nation its own budget, open it in Intel.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-preset="70,15,15">War footing</button><button class="btn sm" data-preset="40,30,30">Balanced</button><button class="btn sm" data-preset="20,50,30">Growth</button><button class="btn sm" data-preset="25,20,55">Research</button></div>
       <h3>Weapons program <span class="muted small" style="text-transform:none;letter-spacing:0">· science spent per month</span></h3>
       <div class="slider"><span>Convert</span><input type="range" id="pConv" min="0" max="100" step="5"><b class="mono" id="vConv"></b></div>
       <p class="muted small" id="convInfo">Turns stored science into troops right away. Each point of science you spend is gone, so every troop fights a little weaker afterwards.</p>
+      <div class="row"><button class="btn sm primary" id="convAll">Convert now: every member</button></div>
+      <p class="muted small" id="convAllInfo"></p>
       <label class="chk"><input type="checkbox" id="oAuto"> <span>Auto-command members without orders</span></label>
       <label class="chk"><input type="checkbox" id="oPilot"> <span>Autopilot: let the AI run my whole alliance</span></label>
-      <label class="chk"><input type="checkbox" id="oTailor"> <span><b>Tailor each nation's budget to its population and wealth</b> (recommended). Poor, populous nations mass troops; rich nations buy science. Turn off to use the sliders above for every member.</span></label>
+      <label class="chk"><input type="checkbox" id="oTailor"> <span><b>Tailor each nation's budget to its population and wealth</b>. Poor, populous nations mass troops; rich nations buy science. Moving a budget slider turns this off. Nations you gave their own budget in Intel keep it either way.</span></label>
       <label class="chk"><input type="checkbox" id="oPause"> <span>Pause on major events (betrayals, war, peace offers)</span></label>
       <h3>Member nations <span class="muted small" style="text-transform:none;letter-spacing:0">· tap one, then tap an enemy on the map</span></h3>
       <div class="list" id="cmdMembers"></div></div>`;
-    const upd=()=>{G.alliances[G.playerAlliance].policy={mil:+$('#pMil').value,eco:+$('#pEco').value,sci:+$('#pSci').value,conv:+$('#pConv').value};pctLabels();save()};
-    ['#pMil','#pEco','#pSci','#pConv'].forEach(s=>$(s).oninput=upd);
+    const setPol=p=>{const A=G.alliances[G.playerAlliance];A.policy={...p,conv:A.policy.conv||0};
+      if(G.autopilot){G.autopilot=false;$('#oPilot').checked=false;toast('Autopilot off: you now set the budget')}
+      else if(G.tailor!==false){G.tailor=false;$('#oTailor').checked=false;toast('Tailored budgets off: every member without its own budget now uses these sliders')}
+      ['mil','eco','sci'].forEach(k=>$('#p'+k[0].toUpperCase()+k.slice(1)).value=A.policy[k]);pctLabels();renderMembers();save()};
+    [['#pMil','mil'],['#pEco','eco'],['#pSci','sci']].forEach(([s,k])=>$(s).oninput=()=>setPol(rebalance(normPol(G.alliances[G.playerAlliance].policy),k,+$(s).value)));
+    $('#pConv').oninput=()=>{if(G.autopilot){G.autopilot=false;$('#oPilot').checked=false}G.alliances[G.playerAlliance].policy.conv=+$('#pConv').value;pctLabels();save()};
+    el.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const [m,e,s]=b.dataset.preset.split(',').map(Number);setPol({mil:m,eco:e,sci:s})});
+    $('#convAll').onclick=()=>{let g=0,n=0;for(const c of members(G.playerAlliance)){const x=convertNow(c);if(x>0){g+=x;n++}}
+      if(n){addLog(`Weapons program: ${n} member${n>1?'s':''} converted science into ${fmt(g)} troops.`,'p');toast(`+${fmt(g)} troops from science`)}else toast('Nothing to convert: already used this month, or science is at the minimum');save();renderPanel()};
     $('#oAuto').onchange=e=>{G.autoCommand=e.target.checked;save()};
     $('#oPilot').onchange=e=>{G.autopilot=e.target.checked;save();renderPanel()};
     $('#oPause').onchange=e=>{G.autoPause=e.target.checked;save()};
@@ -1126,22 +1158,27 @@ function renderCommand(el){
   }
   const A2=G.alliances[G.playerAlliance];
   const ae=document.activeElement;
-  if(!['pMil','pEco','pSci','pConv'].includes(ae&&ae.id)){$('#pMil').value=A2.policy.mil;$('#pEco').value=A2.policy.eco;$('#pSci').value=A2.policy.sci;$('#pConv').value=A2.policy.conv||0}
-  ['#pMil','#pEco','#pSci','#pConv'].forEach(s=>$(s).disabled=G.autopilot);
+  if(!holding($('#cmdRoot'))){const np=normPol(A2.policy);$('#pMil').value=np.mil;$('#pEco').value=np.eco;$('#pSci').value=np.sci;$('#pConv').value=A2.policy.conv||0}
+  ['#pMil','#pEco','#pSci','#pConv','#convAll'].forEach(s=>$(s).disabled=false);
   {const mem=members(G.playerAlliance);const gain=mem.reduce((t,c)=>t+(c.lastConv||0),0);const avgSci=mem.reduce((t,c)=>t+c.sci,0)/Math.max(1,mem.length);
    const avgTm=mem.reduce((t,c)=>t+tm(c),0)/Math.max(1,mem.length);
+   {const ready=mem.filter(c=>c.convTurn!==G.turn&&convNowAmt(c)>.001);const est=ready.reduce((t,c)=>t+convNowAmt(c)*convRate(c),0);
+    $('#convAllInfo').textContent=ready.length?`One-off, once a month per nation: spends ${Math.round(CONV_NOW*100)}% of each member's science for about +${fmt(est)} troops now.`:'Used this month. Available again next month.'}
    $('#convInfo').textContent=(A2.policy.conv?`Last month: +${fmt(gain)} troops from science. `:'Off. ')+`Alliance average science ${avgSci.toFixed(2)} (×${avgTm.toFixed(2)} in battle). Spent science is gone, so every troop fights a little weaker afterwards.`}
   {const h=G.countries[G.playerCountry];if(document.activeElement!==$('#cMyEcon'))$('#cMyEcon').value=h.econType||'mixed';
    const left=(G.econChanged||-99)+6-G.turn;$('#cMyEconD').textContent=NATION_ECON[h.econType||'mixed'].desc+(left>0?` Locked for ${left} more month${left>1?'s':''}.`:' You can switch every 6 months.')}
   pctLabels();
-  $('#oTailor').checked=G.tailor!==false;['#pMil','#pEco','#pSci'].forEach(s=>$(s).disabled=G.autopilot||G.tailor!==false);
+  $('#oTailor').checked=G.tailor!==false;
   $('#oAuto').checked=G.autoCommand;$('#oPilot').checked=G.autopilot;$('#oPause').checked=G.autoPause;
   const mem=members(G.playerAlliance).sort((x,y)=>pw(y)-pw(x));
+  renderMembers();
   $('#cmdYou').innerHTML=`<div class="row" style="justify-content:space-between"><div><div class="small muted">You command</div><h2><span class="sw" style="background:${allyColor(A2)}"></span> ${esc(A2.name)}</h2></div><span class="pill you">${shareOf(G.playerAlliance).toFixed(1)}% of world</span></div>
     <p class="small">Home nation <b>${esc(home.name)}</b> · ${mem.length} member${mem.length!==1?'s':''} · power ${fmt(alliancePower(G.playerAlliance))} · at war with ${G.alliances.filter(a=>a.alive&&atWar(a.id,G.playerAlliance)).length} alliance(s)</p>`;
-  $('#cmdMembers').innerHTML=mem.map(c=>{const st=statusOf(c);const ordered=c.order>=0?'order':c.order===-2?'hold':'auto';
+}
+function renderMembers(){const el=$('#cmdMembers');if(!el)return;const mem=members(G.playerAlliance).sort((x,y)=>pw(y)-pw(x));
+  el.innerHTML=mem.map(c=>{const st=statusOf(c);const ordered=c.order>=0?'order':c.order===-2?'hold':'auto';
     return`<div class="li" data-c="${c.id}"><span class="sw" style="background:rgb(${countryRGB(c).join(',')})"></span>
-      <div class="nm"><b>${esc(c.name)}</b>${c.id===G.playerCountry?' <span class="pill you">home</span>':''}<div class="sub">${esc(st)} · ${ordered} · ${wealthClass(c)} · ${budgetStr(polOf(c))}</div></div>
+      <div class="nm"><b>${esc(c.name)}</b>${c.id===G.playerCountry?' <span class="pill you">home</span>':''}<div class="sub">${esc(st)} · ${ordered} · ${wealthClass(c)} · ${budgetStr(polOf(c))}${c.ownPol?' (own)':''} mil/eco/sci</div></div>
       <div class="mono small" style="text-align:right">${fmt(c.army)} army<div class="sub">${c.cells} streets</div></div></div>`}).join('')||'<p class="muted">No member nations left.</p>';
 }
 function fmtPop(n){return n>=1e7?(n/1e6).toFixed(0)+'M':n>=1e6?(n/1e6).toFixed(1)+'M':Math.round(n/1e3)+'k'}
@@ -1150,20 +1187,25 @@ function pctLabels(){const A=G.alliances[G.playerAlliance].policy;const s=Math.m
   $('#vConv').textContent=((A.conv||0)*.04).toFixed(1)+'%';
   $('#vMil').textContent=Math.round(A.mil/s*100)+'%';$('#vEco').textContent=Math.round(A.eco/s*100)+'%';$('#vSci').textContent=Math.round(A.sci/s*100)+'%'}
 
-function wealthTable(){const cs=G.countries.filter(c=>c.alive).sort((a,b)=>(b.lastIncome||0)-(a.lastIncome||0));
-  return`<h3>All nations by wealth</h3><div style="overflow-x:auto"><table><tr><th>#</th><th>Nation</th><th>Wealth</th><th style="text-align:right">Income</th><th style="text-align:right">Pop.</th><th style="text-align:right">Per person</th></tr>${cs.map((c,i)=>
-    `<tr data-wrow="${c.id}" style="cursor:pointer${c.id===G.sel?';background:rgba(255,255,255,.05)':''}"><td class="n">${i+1}</td><td><span class="sw" style="background:rgb(${countryRGB(c).join(',')})"></span> ${esc(c.name)}${c.id===G.playerCountry?' ★':''}</td><td class="small">${wealthClass(c)}</td><td class="n">${(c.lastIncome||0).toFixed(1)}</td><td class="n">${fmtPop(c.popNow||c.pop)}</td><td class="n">${perCapita(c).toFixed(2)}×</td></tr>`).join('')}</table></div>
-    <p class="small muted">Income is per month. Per person is income per head vs the world average. Low per-person income means cheap troops; high total income means fast research.</p>`}
+function wealthTable(){const cs=G.countries.filter(c=>c.alive).sort((a,b)=>totalWealth(b)-totalWealth(a));
+  const world=cs.reduce((t,c)=>t+totalWealth(c),0)||1;const mine=members(G.playerAlliance).reduce((t,c)=>t+totalWealth(c),0);
+  const open=G.wealthOpen!==false;
+  return`<details id="wealthBox" ${open?'open':''} style="margin-bottom:10px"><summary style="cursor:pointer"><h3 style="display:inline">Total wealth by nation</h3> <span class="small muted">· world ${fmtMoney(world)} · your alliance ${(mine/world*100).toFixed(1)}%</span></summary>
+    <div style="overflow-x:auto;max-height:46vh;overflow-y:auto"><table><tr><th>#</th><th>Nation</th><th style="text-align:right">Total wealth</th><th style="text-align:right">Share</th><th style="text-align:right">Income</th><th style="text-align:right">Pop.</th></tr>${cs.map((c,i)=>{const w=totalWealth(c),sh=w/world*100;
+    return`<tr data-wrow="${c.id}" style="cursor:pointer${c.id===G.sel?';background:rgba(255,255,255,.07)':''}"><td class="n">${i+1}</td><td style="white-space:nowrap" title="${wealthClass(c)}"><span class="sw" style="background:rgb(${countryRGB(c).join(',')})"></span> ${esc(c.name)}${c.id===G.playerCountry?' ★':''}</td><td class="n"><b>${fmtMoney(w)}</b></td><td class="n">${sh.toFixed(1)}%</td><td class="n">${(c.lastIncome||0).toFixed(1)}</td><td class="n">${fmtPop(c.popNow||c.pop)}</td></tr>`}).join('')}</table></div>
+    <p class="small muted">Total wealth = a year of income plus the value of the home economy. Income is per month. High income means fast research; a big population on low income means cheap troops. Tap a row to open that nation.</p></details>`}
+function bindWealth(el){el.querySelectorAll('[data-wrow]').forEach(r=>r.onclick=()=>{G.sel=+r.dataset.wrow;G.dirty=true;renderPanel()});
+  const d=el.querySelector('#wealthBox');if(d)d.ontoggle=()=>{G.wealthOpen=d.open}}
 function renderIntel(el){
   const cs=G.countries;let c=cs[G.sel];
-  if(!c){el.innerHTML='<p class="muted">Tap a nation on the map to see its intelligence file.</p>'+wealthTable();el.querySelectorAll('[data-wrow]').forEach(r=>r.onclick=()=>{G.sel=+r.dataset.wrow;G.dirty=true;renderPanel()});return}
+  if(!c){el.innerHTML=wealthTable()+'<p class="muted">Tap a nation on the map or in the table to see its intelligence file.</p>';bindWealth(el);return}
   const al=G.alliances[c.alliance],pa=G.playerAlliance,reg=REGIONS.find(r=>r.key===c.region);
   // street ledger
   const own=G.owner,org=WD.origin;let home=0,occ=0;const lostTo={},heldFrom={};
   for(let i=0;i<own.length;i++){if(org[i]===c.id){if(own[i]===c.id)home++;else lostTo[own[i]]=(lostTo[own[i]]||0)+1}else if(own[i]===c.id){occ++;heldFrom[org[i]]=(heldFrom[org[i]]||0)+1}}
   const lostList=Object.entries(lostTo).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${esc(cs[k].name)} ${v}`).join(' · ');
   const heldList=Object.entries(heldFrom).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${esc(cs[k].name)} ${v}`).join(' · ');
-  let h=`<div class="card ${c.alliance===pa?'you':''}"><div class="small muted">${esc(reg.name)}</div><h2>${esc(c.name)}${c.alive?'':' <span class="pill war">annexed</span>'}</h2>
+  let h=wealthTable()+`<div class="card ${c.alliance===pa?'you':''}"><div class="small muted">${esc(reg.name)}</div><h2>${esc(c.name)}${c.alive?'':' <span class="pill war">annexed</span>'}</h2>
     <p class="small"><span class="sw" style="background:${allyColor(al)}"></span> ${esc(al.name)} ${c.alliance===pa?'<span class="pill you">your alliance</span>':atWar(pa,c.alliance)?'<span class="pill war">at war</span>':'<span class="pill peace">at peace</span>'}</p></div>`;
   if(c.alive)h+=`<dl class="kv"><dt>Army</dt><dd>${fmt(c.army)}</dd><dt>Combat power</dt><dd>${fmt(pw(c))}</dd><dt>Economy</dt><dd>${fmt(c.econ)} (income ${(c.lastIncome||0).toFixed(1)}/mo)</dd>
     <dt>Science</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd>${c.lastConv?`<dt>Weapons program</dt><dd>+${fmt(c.lastConv)} troops/mo from science</dd>`:''}
@@ -1172,11 +1214,21 @@ function renderIntel(el){
   const held=WD.cities.filter(ct=>G.owner[ct.cell]===c.id).sort((a,b)=>b.pop-a.pop);
   if(c.alive)h+=`<h3>Cities held (${held.length})</h3><p class="small">${held.map(ct=>esc(ct.name)+(ct.cell===c.capital?' ★':'')).join(' · ')||'<span class="muted">None</span>'}</p>`;
   if(c.alive){const rank=cs.filter(x=>x.alive).sort((a,b)=>(b.lastIncome||0)-(a.lastIncome||0)).indexOf(c)+1;const rec=smartSplit(c,'war');const cur=polOf(c);
-    h+=`<h3>Wealth</h3><dl class="kv"><dt>Class</dt><dd>${wealthClass(c)} (#${rank} of ${cs.filter(x=>x.alive).length})</dd><dt>Income</dt><dd>${(c.lastIncome||0).toFixed(1)}/mo · ${wealthRatio(c).toFixed(2)}× world average</dd>
+    h+=`<h3>Wealth</h3><dl class="kv"><dt>Total wealth</dt><dd>${fmtMoney(totalWealth(c))}</dd><dt>Class</dt><dd>${wealthClass(c)} (#${rank} by income of ${cs.filter(x=>x.alive).length})</dd><dt>Income</dt><dd>${(c.lastIncome||0).toFixed(1)}/mo · ${wealthRatio(c).toFixed(2)}× world average</dd>
       <dt>Population</dt><dd>${fmtPop(c.popNow||c.pop)}</dd><dt>Income per person</dt><dd>${perCapita(c).toFixed(2)}× average</dd>
       <dt>Troops per $</dt><dd>×${troopEff(c).toFixed(2)} (cheap labour = more)</dd><dt>Research</dt><dd>+${(c.lastResearch||0).toFixed(3)} science/mo</dd>
       <dt>Budget now</dt><dd>${budgetStr(cur)} mil/eco/sci</dd><dt>Best for it</dt><dd>${budgetStr(rec)} mil/eco/sci</dd></dl>
-      <p class="small muted">${troopEff(c)>1.15?'Cheap labour: troops are this nation\'s best buy.':wealthRatio(c)>1.6?'Rich: science multiplies its whole army cheaply.':'Middle of the pack: a mixed budget works best.'}</p>`}
+      <p class="small muted">${troopEff(c)>1.15?'Cheap labour: troops are this nation\'s best buy.':wealthRatio(c)>1.6?'Rich: science multiplies its whole army cheaply.':'Middle of the pack: a mixed budget works best.'}</p>`;
+    if(c.alliance===pa&&!G.autopilot){const p=normPol(cur);const amt=convNowAmt(c),used=c.convTurn===G.turn;
+      h+=`<h3>Budget for ${esc(c.name)} <span class="muted small" style="text-transform:none;letter-spacing:0">· ${c.ownPol?'its own budget':G.tailor!==false?'tailored automatically':'alliance budget'}</span></h3>
+      <div class="slider"><span>Military</span><input type="range" data-np="mil" min="0" max="100" value="${p.mil}"><b class="mono" data-npv="mil">${p.mil}%</b></div>
+      <div class="slider"><span>Economy</span><input type="range" data-np="eco" min="0" max="100" value="${p.eco}"><b class="mono" data-npv="eco">${p.eco}%</b></div>
+      <div class="slider"><span>Science</span><input type="range" data-np="sci" min="0" max="100" value="${p.sci}"><b class="mono" data-npv="sci">${p.sci}%</b></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-nrec="1">Use best for it (${budgetStr(rec)})</button>${c.ownPol?'<button class="btn sm" data-nreset="1">Back to alliance budget</button>':''}</div>
+      <h3>Convert science to military</h3>
+      <dl class="kv"><dt>Science stock</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd><dt>Rate</dt><dd>1 science → ${fmt(convRate(c))} troops</dd></dl>
+      <div class="row" style="margin-top:6px"><button class="btn sm primary" data-nconv="1" ${used||amt<=.001?'disabled':''}>Convert ${amt.toFixed(2)} science → +${fmt(amt*convRate(c))} troops</button></div>
+      <p class="small muted">${used?'Already converted this month. ':''}Spends ${Math.round(CONV_NOW*100)}% of this nation's science once a month. Battle strength drops to ×${tm({...c,sci:c.sci-amt}).toFixed(2)}. The Convert slider in Command does this gradually for the whole alliance.</p>`}}
   h+=`<h3>Street ledger</h3><dl class="kv"><dt>Home streets held</dt><dd>${home} / ${c.origCells}</dd><dt>Occupied streets</dt><dd>${occ}</dd></dl>`+
     (lostList?`<p class="small"><span class="muted">Lost to:</span> ${lostList}</p>`:'')+(heldList?`<p class="small"><span class="muted">Holds from:</span> ${heldList}</p>`:'');
   if(c.alive&&!G.over){
@@ -1197,9 +1249,14 @@ function renderIntel(el){
       h+=`<p class="small muted" style="margin-top:12px">You are at ${tr?'truce':'peace'} with the ${esc(al.name)}.</p><div class="row"><button class="btn danger" data-decl="1">${tr?'Break truce: declare war':'Declare war on the '+esc(al.name)}</button></div>`;
     }
   }
-  h+=wealthTable();
   el.innerHTML=h;
-  el.querySelectorAll('[data-wrow]').forEach(r=>r.onclick=()=>{G.sel=+r.dataset.wrow;G.dirty=true;renderPanel();el.scrollTop=0});
+  bindWealth(el);
+  el.querySelectorAll('[data-np]').forEach(s=>s.oninput=()=>{c.ownPol=rebalance(normPol(c.ownPol||polOf(c)),s.dataset.np,+s.value);
+    ['mil','eco','sci'].forEach(k=>{el.querySelector(`[data-np="${k}"]`).value=c.ownPol[k];el.querySelector(`[data-npv="${k}"]`).textContent=c.ownPol[k]+'%'})});
+  el.querySelectorAll('[data-np]').forEach(s=>s.onchange=()=>{s.blur();save();renderPanel()});
+  const nr=el.querySelector('[data-nrec]');if(nr)nr.onclick=()=>{const r=smartSplit(c,'war');c.ownPol={mil:r.mil,eco:r.eco,sci:r.sci};save();renderPanel()};
+  const nx=el.querySelector('[data-nreset]');if(nx)nx.onclick=()=>{delete c.ownPol;save();renderPanel()};
+  const nc=el.querySelector('[data-nconv]');if(nc)nc.onclick=()=>{const g=convertNow(c);if(g>0){addLog(`${c.name} converted science into ${fmt(g)} troops.`,'p');toast(`${c.name}: +${fmt(g)} troops`)}save();renderPanel()};
   el.querySelectorAll('[data-ord]').forEach(b=>b.onclick=()=>{c.order=+b.dataset.ord;if(c.order>=0)addLog(`${c.name} ordered to attack ${cs[c.order].name}.`,'p');chooseTargetsPreview();save();renderPanel()});
   const aw=el.querySelector('[data-allywar]');if(aw)aw.onclick=()=>warOnAlly(c);
   const dc=el.querySelector('[data-decl]');if(dc)dc.onclick=()=>{if((G.truce[wkey(c.alliance,pa)]||0)>G.turn)addLog(`You broke the truce with the ${al.name}.`,'bad');declareWar(pa,c.alliance);toast(`War declared on the ${al.name}`);save();refreshUI()};
@@ -1245,8 +1302,8 @@ function renderGuide(el){
   <ol class="small">
     <li><b>Goal:</b> your alliance must control ${G.settings.win}% of the world's streets before the ${G.settings.len}-minute clock runs out. When time runs out, the alliance with the most land wins.</li>
     <li><b>Budget balance:</b> military money buys troops, science makes every troop stronger, economy grows the income that pays for both. The best mix depends on the nation: poor, populous nations get the most soldiers per dollar, while rich nations research fastest because research has a fixed price. Leave <i>tailor each nation's budget</i> on and each member uses its best mix. The Intel tab ranks every nation by wealth.</li>
-    <li><b>Weapons program:</b> the Convert slider spends up to 4% of your stored science each month to raise troops at once. You get more soldiers now, but every troop is weaker afterwards. Balance it against the Military, Economy and Science budget.</li>
-    <li><b>Budget:</b> set Military / Economy / Science in Command. Money comes from the streets you hold. Occupied streets pay 70%.</li>
+    <li><b>Weapons program:</b> the Convert slider spends up to 4% of your stored science each month to raise troops at once. <i>Convert now</i> (in Command for every member, or in Intel for one nation) spends 15% at once, once a month. You get more soldiers now, but every troop is weaker afterwards. Balance it against the Military, Economy and Science budget.</li>
+    <li><b>Budget:</b> set Military / Economy / Science in Command (they always add up to 100%), or give one nation its own budget in Intel. Money comes from the streets you hold. Occupied streets pay 70%.</li>
     <li><b>Click any nation</b> to see its name, alliance and capital, and to declare war, offer peace or launch an attack from that card. You can even declare war on one of your own allies: it gets expelled and your alliance fractures by foreign policy.</li>
     <li><b>Orders:</b> tap one of your nations, then an enemy (or tap an enemy and press <i>Send</i>). Several members hitting one target split its defence, so focused attacks win.</li>
     <li><b>Cities:</b> every capital and city on the map is a real one. Cities are worth several times a normal street in income, and capitals hold out until their nation is half conquered.</li>
