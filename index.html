@@ -146,7 +146,7 @@ ol,ul{padding-left:20px;margin:6px 0} li{margin:4px 0}
       </div>
       <div class="body" id="setup">
         <h2>Draft the world</h2>
-        <p class="muted small">The map is carved into random nations. Each nation inherits strengths from a modern demographic bloc, and the alliances are balanced so every bloc starts with exactly equal combined military, economic and scientific strength.</p>
+        <p class="muted small">The real world map is carved into random nations. Each nation inherits strengths from the modern demographic bloc it sits in (North Atlantic, East Asia, the Gulf, Sub-Saharan Africa and so on), and the alliances are balanced so every bloc starts with exactly equal combined military, economic and scientific strength.</p>
         <div class="grid2">
           <label class="f"><span>Map size</span><select id="sMap"><option value="small">Small (fast)</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></label>
           <label class="f"><span>Nations</span><select id="sCountries"><option>20</option><option>28</option><option selected>36</option><option>48</option></select></label>
@@ -187,7 +187,10 @@ const BASE_TURN_MS=5000;  // one month at 1x
 const MAX_MONTHS=1500;
 const START_YEAR=2031;
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const MAP_SIZES={small:[120,68],medium:[160,90],large:[208,117]};
+// Real-world land masks (Natural Earth 1:50m land, public domain), Miller projection, 78N to 56S.
+// Each mask is run lengths in base 36, alternating sea/land, starting with sea.
+const WORLD={north:78,south:-56,masks:{small:{W:120,H:54,rle:"k.2.6.1.1.4.3.g.c.1.1.1.q.2.18.5.1.1.1.3.2.1.6.e.p.3.9.7.8.2.v.1.8.2.1.1.9.d.o.2.9.8.15.5.1.1.1.3.1.5.6.c.p.1.4.1.2.h.4.1.i.4.8.k.3.c.e.3.7.2.3.w.b.9.1.5.1.9.1.7.3.c.e.3.a.1.1.w.3.1.3.1s.8.4.7.1.z.1.2.1p.7.3.1g.q.3.4.4.4.6.2.8.4.1.1g.5.o.5.2.7.3.g.4.1.1g.6.5.2.h.5.3.8.1.g.4.1.19.2.2.b.2.5.f.5.5.j.1.3.1.1.2.2.13.6.1.m.f.3.6.i.1.4.2.2.13.6.2.n.o.g.1.1.1.3.18.5.2.o.n.h.1e.4.1.p.k.3.1.h.1d.v.k.k.1b.x.k.l.4.1.5.3.3.1.s.2.1.u.i.l.4.3.1.1.4.1.1.2.2.2.q.z.g.m.3.5.1.1.1.1.8.1.m.1.2.10.g.n.1.2.2.6.v.2.1.3.1.x.e.n.7.8.s.3.3.z.c.o.c.1.u.16.6.4.1.n.k.1.o.15.1.1.4.r.m.2.l.18.3.r.i.1.7.3.g.1a.3.2.1.3.1.j.i.1.7.4.5.2.5.1e.5.n.j.1.5.5.4.3.5.4.1.1c.3.m.n.8.2.6.3.1j.1.3.2.i.k.1.1.8.2.7.2.5.1.1e.8.g.l.9.1.e.1.1g.9.e.3.2.e.h.1.4.2.1i.9.k.c.h.2.3.2.1i.c.i.b.j.2.1.3.5.1.1c.e.h.9.l.2.8.4.19.f.g.9.o.1.8.3.19.e.g.9.29.d.h.a.t.2.2.1.1b.c.h.9.2.2.o.5.1.2.1b.b.h.8.3.1.o.9.1c.9.i.8.2.2.m.c.1a.9.k.7.3.1.m.d.19.8.l.6.r.d.19.7.n.4.s.d.19.7.n.3.t.4.2.7.19.5.1t.4.19.6.1u.3.8.1.10.4.39.2.26.2.11.3.26.1.12.3.39.2.3b.1.3b.1.2b"},medium:{W:160,H:73,rle:"t.2.a.4.4.m.f.2.2.1.y.2.1n.4.1.1.2.6.1.2.1.1.4.m.11.2.e.6.1m.5.2.3.1.6.9.h.y.3.b.b.b.3.1.1.13.3.d.1.d.g.x.2.c.c.1i.5.3.2.1.2.1.1.1.6.9.f.y.1.6.1.4.h.1.3.6.1.14.a.1.4.1.7.8.f.x.2.5.s.4.5.l.7.8.1.3.8.2.d.5.g.h.6.a.1.1.1.3.15.g.c.1.7.1.7.1.4.2.2.1.6.4.f.j.6.6.1.4.2.2.15.4.4.2.2e.a.6.9.1.1e.2b.c.2.c.1.1b.1.3.2a.9.3.1y.x.1.2.4.3.6.5.8.3.b.5.1.1x.8.w.a.2.7.3.m.5.1.1z.6.w.7.4.9.3.l.6.2.1o.1.6.b.4.1.1.4.k.7.4.2.1.u.7.1.1.1.1l.2.2.h.2.7.k.6.7.q.1.4.1.1.3.3.1g.7.2.h.1.a.l.5.7.p.1.5.3.2.1g.8.3.t.m.2.9.m.4.4.1.4.1g.8.3.u.m.1.a.l.1.1.2.2.1q.5.2.w.l.1.a.l.1.1.3.1.1q.13.u.1.1.p.1q.1.1.15.q.3.2.m.1s.17.q.s.n.1.13.17.r.r.e.4.4.2.12.2.1.15.o.r.6.2.2.1.6.5.3.2.11.3.1.15.m.t.5.5.2.1.3.1.9.2.y.4.1.16.m.t.4.7.1.1.1.2.a.2.t.1.3.5.1.17.k.u.3.5.1.1.1.5.b.1.u.2.2.3.2.17.k.v.1.1.6.b.11.3.2.1.3.1a.h.v.9.b.12.1i.g.w.b.2.5.1.13.1k.8.5.1.v.1n.1j.1.1.6.6.1.u.l.1.6.1.v.1m.5.10.u.6.o.1o.4.6.2.s.n.1.9.4.m.1.1.1n.4.3.1.4.2.p.p.1.8.5.8.2.7.1u.4.1.2.7.1.o.o.1.7.7.6.4.5.1.1.1v.6.v.p.1.5.9.4.5.6.5.1.1t.4.t.q.1.3.b.3.7.6.20.2.u.r.d.3.9.4.21.1.3.7.l.t.b.1.b.2.23.1.1.9.k.s.d.1.8.1.a.1.1y.b.j.4.2.k.n.1.5.2.20.c.r.h.m.3.4.2.21.d.q.g.o.2.2.5.1z.g.o.f.p.3.2.3.1.1.4.2.1s.j.m.d.r.2.4.1.1.2.4.5.1o.k.l.c.t.1.e.4.1o.k.l.c.v.2.b.4.1n.j.m.c.30.h.n.c.14.3.2.1.1q.h.m.d.3.1.y.5.2.1.1r.g.m.c.3.2.x.7.1.2.1s.d.n.b.4.2.w.b.1s.d.o.a.3.3.t.f.1r.b.q.a.3.2.t.h.1q.a.s.8.5.1.t.i.1o.a.t.8.z.i.1o.a.t.7.11.h.1o.9.v.5.12.h.1o.8.w.4.13.4.5.7.1p.7.2f.5.1o.8.2f.5.b.1.1c.6.2w.2.1c.4.2l.2.a.1.1e.4.2m.1.a.1.1e.4.2v.2.1f.3.4c.4.4c.4.4d.2.4e.3.4f.2.31"},large:{W:208,H:94,rle:"13.1.b.1.1.6.4.u.j.3.1.2.19.2.25.3.b.2.2.7.4.t.l.1.s.2.i.4.24.2.1.2.2.2.1.4.2.2.h.o.19.4.g.b.e.3.1n.6.3.1.1.2.1.7.c.o.16.3.f.f.e.4.2.2.1d.4.z.m.17.2.g.e.20.6.4.2.2.5.2.1.1.5.c.k.17.2.d.n.2.3.8.1.1g.c.2.3.1.1.2.2.1.6.b.j.17.2.8.2.3.1.1.s.6.3.l.5q.c.7.i.9.3.3.2.c.8.i.q.5.l.3.1.1d.m.e.2.9.2.9.1.4.4.2.2.6.8.1.1.f.o.9.g.2.2.3.1.1j.1.4.2.35.c.8.1.1.2.1.4.1.2.1.1.1.1q.32.f.4.e.1.1u.2z.c.1.2.3.f.1.1q.2.2.2z.6.2.5.3.2c.1.7.16.1.3.2.1.1.5.8.7.a.5.e.6.2.7.1.29.b.16.b.4.8.5.s.7.2.2j.8.17.8.3.3.1.9.5.r.7.2.2i.a.16.9.5.c.3.s.7.2.26.2.1.1.6.d.9.4.r.a.5.2.1.14.8.3.1.1.21.4.2.l.3.9.q.9.6.1.2.13.7.4.1w.a.2.n.1.1.1.9.1.1.o.8.9.x.2.6.1.1.3.4.1v.a.3.l.2.d.r.7.9.v.3.6.1.1.2.3.1w.a.4.k.1.h.s.2.c.t.4.6.2.5.1v.b.4.13.s.1.d.r.3.1.2.5.24.1.1.7.3.14.s.1.e.q.2.1.4.2.28.7.2.16.14.1.1.t.2c.1.1.1f.12.2.2.w.29.1.1.1h.z.3.3.s.2c.1.1.1h.z.5.2.t.29.2.1.1h.11.y.j.1.2.1.6.2.1e.1k.x.1.1.10.8.2.8.5.5.2.1e.3.1.1h.v.10.7.4.2.2.6.7.5.2.1c.3.3.1g.v.10.7.3.1.1.3.1.6.1.3.3.4.3.18.1p.t.12.5.5.1.3.1.1.3.1.e.2.12.1.4.7.1.1j.r.13.5.9.1.2.2.1.d.3.11.4.2.7.1.1j.r.13.4.6.1.6.1.3.d.2.13.3.2.4.2.1l.q.14.1.2.7.f.1c.4.2.2.4.1m.o.15.a.e.1e.5.4.1p.m.15.e.3.2.6.1e.5.1.1t.k.15.g.1.1n.1z.c.2.1.4.1.15.y.1.16.1z.1.1.8.8.2.12.10.2.14.21.1.1.7.9.1.12.s.1.8.4.10.25.6.1b.u.1.8.1.2.6.t.27.5.8.2.10.v.1.c.6.r.2.1.25.5.4.2.4.2.y.w.1.b.6.b.2.9.1.1.2b.6.2.2.9.2.v.v.1.a.9.8.4.7.2.1.2d.8.16.v.2.8.a.6.6.8.8.1.28.6.15.x.2.5.c.5.8.8.6.2.2c.5.12.y.1.4.e.3.b.6.7.1.2e.3.12.10.h.3.b.6.7.1.2f.2.5.4.u.y.2.3.e.2.b.1.2.3.2o.3.2.9.r.11.f.2.b.1.e.1.2i.b.r.10.h.1.a.1.d.2.2i.e.p.7.2.p.u.1.8.2.2m.f.z.n.s.1.1.2.6.2.2n.g.z.l.t.2.1.1.4.4.2m.h.y.k.w.3.3.5.2l.k.w.j.y.2.3.5.1.2.5.1.2d.m.u.h.10.2.3.3.2.2.5.6.27.q.s.g.10.2.8.2.7.6.25.r.r.g.12.2.h.5.1.1.23.q.r.g.14.2.f.3.1.2.25.o.t.f.1q.2.24.o.t.f.1n.1.29.m.t.g.5.1.1a.4.3.1.29.l.u.h.3.2.17.7.3.2.2a.k.t.g.3.3.16.9.1.3.2b.i.u.e.4.4.15.f.2a.i.u.d.6.2.15.h.29.h.w.d.4.3.12.k.29.g.x.d.4.3.12.l.28.e.z.c.5.2.13.m.27.d.11.a.1b.m.27.d.11.a.1b.n.26.c.13.8.1c.n.26.b.14.7.1e.l.27.b.14.6.1f.5.6.a.26.b.16.1.1j.2.9.9.27.9.35.7.d.1.1s.a.36.6.e.1.1s.7.3s.2.1q.7.3t.1.1r.6.3d.2.d.2.1s.6.3d.1.d.2.1t.5.3r.2.1u.4.3r.2.1v.5.5m.5.5n.5.5o.3.5.1.5j.3.5q.3.9r"}}};
+const MAP_SIZES={small:[120,54],medium:[160,73],large:[208,94]};
 
 const REGIONS=[
  {key:'atl',name:'Atlantic Bloc',econ:1.45,sci:1.5,mil:1.25,pop:.8,grow:1,fp:{Loyalist:.5,Pragmatist:.35,Opportunist:.1,Isolationist:.05},
@@ -273,23 +276,16 @@ function genWorld(settings,seed){
   const rng=mulberry32(seed);
   const [W,H]=MAP_SIZES[settings.mapSize]||MAP_SIZES.medium;
   const N=W*H;
-  const n1=makeNoise(rng,7,5),n2=makeNoise(rng,14,9),n3=makeNoise(rng,30,18);
-  const elev=new Float32Array(N);
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    const u=x/W,v=y/H;let e=.58*n1(u*6,v*4)+.29*n2(u*13,v*8)+.13*n3(u*28,v*16);
-    const d=Math.min(u,1-u,v,1-v);if(d<.09)e-=(.09-d)/.09*.45;
-    elev[y*W+x]=e;
-  }
-  const sorted=Array.from(elev).sort((a,b)=>a-b);
-  const th=sorted[Math.floor(N*.56)];
-  const land=new Uint8Array(N);for(let i=0;i<N;i++)land[i]=elev[i]>th?1:0;
-  // remove small islands
-  const comp=new Int32Array(N).fill(-1);
-  for(let i=0;i<N;i++){if(!land[i]||comp[i]>=0)continue;const st=[i],cells=[];comp[i]=i;
-    while(st.length){const c=st.pop();cells.push(c);const x=c%W;
-      for(const j of [x>0?c-1:-1,x<W-1?c+1:-1,c-W,c+W]){if(j>=0&&j<N&&land[j]&&comp[j]<0){comp[j]=i;st.push(j)}}}
-    if(cells.length<45)for(const c of cells)land[c]=0;}
-  const landCells=[];for(let i=0;i<N;i++)if(land[i])landCells.push(i);
+  const n3=makeNoise(rng,30,18);
+  const mk=WORLD.masks[settings.mapSize]||WORLD.masks.medium;
+  const land=new Uint8Array(N);{let p=0,v=0;for(const r of mk.rle.split('.')){const n=parseInt(r,36);if(v)land.fill(1,p,p+n);p+=n;v^=1}}
+  // nations are founded only on landmasses of 40+ squares; smaller islands join the nearest nation later
+  const comp=new Int32Array(N).fill(-1),compSize=[];
+  for(let i=0;i<N;i++){if(!land[i]||comp[i]>=0)continue;const id=compSize.length;const st=[i];comp[i]=id;let n=0;
+    while(st.length){const c=st.pop();n++;const x=c%W;
+      for(const j of [x>0?c-1:-1,x<W-1?c+1:-1,c-W,c+W]){if(j>=0&&j<N&&land[j]&&comp[j]<0){comp[j]=id;st.push(j)}}}
+    compSize.push(n)}
+  const landCells=[];for(let i=0;i<N;i++)if(land[i]&&compSize[comp[i]]>=40)landCells.push(i);
   // seeds
   const nC=settings.countries;const seeds=[];
   for(let c=0;c<nC;c++){let best=-1,bd=-1;
@@ -306,7 +302,11 @@ function genWorld(settings,seed){
     if(origin[i]>=0||k>dist[i])continue;origin[i]=c;const x=i%W;
     for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||!land[j]||origin[j]>=0)continue;
       const nk=k+(1+jit[j])*sizeF[c];if(nk<dist[j]){dist[j]=nk;heap.push(nk,j*64+c)}}}
-  for(let i=0;i<N;i++)if(land[i]&&origin[i]<0)land[i]=0;
+  // islands without a nation go to the nearest nation across the water
+  {const q=[];const seen=new Uint8Array(N);for(let i=0;i<N;i++)if(origin[i]>=0){q.push(i);seen[i]=1}
+    const lab=new Int16Array(N).fill(-1);for(const i of q)lab[i]=origin[i];
+    for(let h=0;h<q.length;h++){const i=q[h],x=i%W;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||seen[j])continue;seen[j]=1;lab[j]=lab[i];q.push(j)}}
+    for(let i=0;i<N;i++)if(land[i]&&origin[i]<0)origin[i]=lab[i];}
   // coast lists
   const coast=[],coastWater=new Uint8Array(N),isCoast=new Uint8Array(N);
   for(let i=0;i<N;i++){const x=i%W;const nb=[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W];
@@ -336,18 +336,24 @@ function genWorld(settings,seed){
       if(Math.sqrt(bd)<=lim)chosen.push([i,bj])}
     for(const [i,j] of chosen)pairs.push(i,j)}
   const seaPairs=Int32Array.from(pairs);
-  // regions (modern demographic blocs) laid over the map
-  const R=Math.min(REGIONS.length,nC);const centers=[seeds[0]];
-  while(centers.length<R){let best=-1,bd=-1;for(const s of seeds){if(centers.includes(s))continue;let md=1e9;
-      for(const c of centers){const dx=c%W-s%W,dy=((c/W)|0)-((s/W)|0);md=Math.min(md,dx*dx+dy*dy)}
-      if(md>bd){bd=md;best=s}}centers.push(best)}
-  const regOrder=shuffle(REGIONS.map((_,i)=>i),rng);
+  // regions: each nation belongs to the modern demographic bloc where its capital really is
+  const D=Math.PI/180,mil=f=>1.25*Math.log(Math.tan(Math.PI/4+.4*f*D));const yN=mil(WORLD.north),yS=mil(WORLD.south);
+  const lonlat=i=>{const x=i%W,y=(i/W)|0;const my=yN-(y+.5)/H*(yN-yS);return[-180+(x+.5)/W*360,(2.5*Math.atan(Math.exp(.8*my))-.625*Math.PI)/D]};
+  const regionAt=i=>{const [lo,la]=lonlat(i);
+    if(lo<-25)return la>28||(lo>-75&&la>50)?'atl':'lat';
+    if(lo<60&&la>=12&&la<=42&&!(lo<26&&la>36))return'gul';
+    if(lo<60&&la<12)return'afr';
+    if(lo<28&&la>36)return'atl';
+    if(lo<60)return'ste';
+    if(lo<92&&la<36)return'sas';
+    if(la>=52||(lo<75&&la>=35))return'ste';
+    if(la>=20)return'eas';
+    return'pac'};
   // countries
   const counts=new Array(nC).fill(0);for(let i=0;i<N;i++)if(origin[i]>=0)counts[origin[i]]++;
   const used=new Set();const countries=[];
-  for(let c=0;c<nC;c++){const s=seeds[c];let ri=0,md=1e9;
-    centers.forEach((ce,k)=>{const dx=ce%W-s%W,dy=((ce/W)|0)-((s/W)|0);const d=dx*dx+dy*dy;if(d<md){md=d;ri=k}});
-    const reg=REGIONS[regOrder[ri]];let name;
+  for(let c=0;c<nC;c++){const s=seeds[c];
+    const reg=REGIONS.find(r=>r.key===regionAt(s));let name;
     for(let t=0;t<40;t++){name=reg.a[(rng()*reg.a.length)|0]+reg.b[(rng()*reg.b.length)|0];if(!used.has(name))break}
     if(used.has(name))name+=' '+(c+1);used.add(name);
     const pop=counts[c]*reg.pop*(.7+.6*rng());
@@ -410,7 +416,7 @@ function newWorld(settings,seed){
   WD=genWorld(settings,seed);
   const countries=WD.countries.map(c=>({...c}));
   const alliances=assignAlliances(countries,settings.alliances,mulberry32(seed^0x9e3779b9),WD.W);
-  G={v:1,seed,settings,started:false,turn:0,elapsed:0,speed:1,running:false,over:null,countries,alliances,wars:{},truce:{},peaceAsk:{},
+  G={v:2,seed,settings,started:false,turn:0,elapsed:0,speed:1,running:false,over:null,countries,alliances,wars:{},truce:{},peaceAsk:{},
     playerAlliance:0,playerCountry:0,log:[],autoCommand:true,autopilot:false,autoPause:true,lastBetrayal:-99,
     owner:Int16Array.from(WD.origin),cap:new Int32Array(WD.N).fill(-99),sel:-1};
   mark=new Uint32Array(WD.N);
@@ -781,7 +787,7 @@ function save(){
 }
 function load(){
   const raw=store.get();if(!raw)return false;
-  try{const o=JSON.parse(raw);if(o.v!==1)return false;
+  try{const o=JSON.parse(raw);if(o.v!==2)return false;
     WD=genWorld(o.settings,o.seed);
     G={...o,owner:rleDecode(o.owner,WD.N),cap:new Int32Array(WD.N).fill(-99),running:false,pendingPeace:null};
     mark=new Uint32Array(WD.N);computeLinks();updateCounts();return true;
