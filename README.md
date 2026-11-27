@@ -14,6 +14,7 @@ A browser strategy war game in one file (`index.html`). There's nothing to insta
 - **Modern demographic blocs.** Each nation takes its strengths from the bloc where its capital actually sits: Atlantic, East Asian, Eurasian Steppe, Gulf & Levant, South Asian, Latin, Sub-Saharan and Austro-Pacific. The bloc sets its military, economic and scientific strength, its population and its foreign-policy temperament.
 - **Equal alliances.** Nations are grouped into 2–6 regional alliances. Every alliance starts with exactly the same strength index (40% military, 35% economy, 25% science). Battlefield power is also equalized, so no alliance starts ahead.
 - **You get one nation in one alliance** and command that whole alliance. The computer runs every other alliance. It sets budgets, gangs up on weak targets, declares war when it has the edge and offers peace when it's losing.
+- **Your nation's economy:** pick Mixed, Free market, State-planned, War economy, Knowledge economy or Resource exporter at setup, and switch in the Command tab (once every 6 months). It stacks on top of the world economic policy.
 - **World settings you choose:**
   - **Economy:** Free-trade, Mixed, Protectionism or War economy.
   - **Military doctrine:** Blitzkrieg, Conventional, Fortress or High-tech.

@@ -168,6 +168,7 @@ ol,ul{padding-left:20px;margin:6px 0} li{margin:4px 0}
         </div>
         <label class="f"><span>Clock</span><select id="sClock"><option value="strict" selected>Runs while paused (hard limit)</option><option value="play">Stops while paused</option></select></label>
         <div class="card you" id="youCard"></div>
+        <label class="f"><span>Your nation's economy</span><select id="sMyEcon"></select><div class="desc" id="dMyEcon"></div></label>
         <h3>Alliances at the start</h3>
         <div id="alliPreview"></div>
         <div class="row" style="margin-top:14px">
@@ -222,6 +223,16 @@ const ECON={
  prot:{name:'Protectionism',desc:'Slow growth, no trade bonus, slightly cheaper armies.',income:.9,growth:.8,milConv:1.1,sciRate:.9,trade:0},
  war:{name:'War economy',desc:'Factories turn out armies 60% faster, but growth and research crawl.',income:1,growth:.65,milConv:1.6,sciRate:.8,trade:0},
 };
+// Economy type of a single nation (you pick yours). Stacks on top of the world economic policy.
+const NATION_ECON={
+ mixed:{name:'Mixed economy',desc:'No strengths, no weaknesses.',income:1,growth:1,milConv:1,sciRate:1},
+ market:{name:'Free market',desc:'+15% income, +25% growth, armies cost 10% more.',income:1.15,growth:1.25,milConv:.9,sciRate:1},
+ planned:{name:'State-planned',desc:'Armies 35% cheaper, but 10% less income and slower growth.',income:.9,growth:.9,milConv:1.35,sciRate:1},
+ war:{name:'War economy',desc:'Armies 70% cheaper. Growth falls by 40% and research by 20%.',income:1,growth:.6,milConv:1.7,sciRate:.8},
+ tech:{name:'Knowledge economy',desc:'+60% research speed, armies cost 10% more.',income:1,growth:1,milConv:.9,sciRate:1.6},
+ resource:{name:'Resource exporter',desc:'+25% income now, but 15% slower growth and research.',income:1.25,growth:.85,milConv:1,sciRate:.85},
+};
+const NE=c=>NATION_ECON[c.econType]||NATION_ECON.mixed;
 const MIL={
  blitz:{name:'Blitzkrieg',desc:'Fronts move 60% faster with heavier losses. Shortest games.',speed:1.6,loss:1.3,def:.9,techW:1},
  conv:{name:'Conventional warfare',desc:'Standard offence, defence and casualties.',speed:1,loss:1,def:1,techW:1},
@@ -493,12 +504,13 @@ function step(){
   for(const c of cs){if(!c.alive)continue;
     const al=G.alliances[c.alliance];const pol=al.policy;const sum=Math.max(1,pol.mil+pol.eco+pol.sci);
     const nAllies=members(c.alliance).length;
-    const income=c.income*.1*E.income*(1+.03*c.sci)*(1+E.trade*Math.min(1,(nAllies-1)/4));
+    const X=NE(c);
+    const income=c.income*.1*E.income*X.income*(1+.03*c.sci)*(1+E.trade*Math.min(1,(nAllies-1)/4));
     c.lastIncome=income;
     const reg=REGIONS.find(r=>r.key===c.region);
-    c.army+=income*pol.mil/sum*E.milConv;c.army*=.98;
-    c.econ*=1+.02*pol.eco/sum*E.growth*reg.grow;                       // home economy grows by its own size, not the empire's
-    c.sci+=.1*pol.sci/sum*E.sciRate*Math.sqrt(clamp(income/avgInc,.1,4))/(1+c.sci*.12);
+    c.army+=income*pol.mil/sum*E.milConv*X.milConv;c.army*=.98;
+    c.econ*=1+.02*pol.eco/sum*E.growth*X.growth*reg.grow;                       // home economy grows by its own size, not the empire's
+    c.sci+=.1*pol.sci/sum*E.sciRate*X.sciRate*Math.sqrt(clamp(income/avgInc,.1,4))/(1+c.sci*.12);
     for(const k of ['army','econ','sci'])if(!isFinite(c[k])||c[k]<1)c[k]=1;
   }
   // reinforcements: rear members ship 6% of their army each month to frontline allies
@@ -1047,6 +1059,9 @@ function renderCommand(el){
   if(!el.querySelector('#cmdRoot')){
     el.innerHTML=`<div id="cmdRoot">
       <div class="card you" id="cmdYou"></div>
+      <h3>Your nation's economy</h3>
+      <select id="cMyEcon" aria-label="Your nation's economy"></select>
+      <div class="desc" id="cMyEconD" style="margin-top:6px"></div>
       <h3>Alliance budget</h3>
       <div class="slider"><span>Military</span><input type="range" id="pMil" min="0" max="100"><b class="mono" id="vMil"></b></div>
       <div class="slider"><span>Economy</span><input type="range" id="pEco" min="0" max="100"><b class="mono" id="vEco"></b></div>
@@ -1062,12 +1077,18 @@ function renderCommand(el){
     $('#oAuto').onchange=e=>{G.autoCommand=e.target.checked;save()};
     $('#oPilot').onchange=e=>{G.autopilot=e.target.checked;save();renderPanel()};
     $('#oPause').onchange=e=>{G.autoPause=e.target.checked;save()};
+    fillSelect($('#cMyEcon'),NATION_ECON,'mixed');
+    $('#cMyEcon').onchange=e=>{const h=G.countries[G.playerCountry];const left=(G.econChanged||-99)+6-G.turn;
+      if(left>0){e.target.value=h.econType||'mixed';toast(`Your economy is still reorganising. You can switch again in ${left} month${left>1?'s':''}.`);return}
+      h.econType=e.target.value;G.econChanged=G.turn;addLog(`${h.name} switched to a ${NATION_ECON[h.econType].name.toLowerCase()}.`,'p');toast(`${h.name} now runs a ${NATION_ECON[h.econType].name.toLowerCase()}`);save();renderPanel()};
     $('#cmdMembers').onclick=e=>{const r=e.target.closest('[data-c]');if(!r)return;G.sel=+r.dataset.c;G.dirty=true;setTab('intel')};
   }
   const A2=G.alliances[G.playerAlliance];
   const ae=document.activeElement;
   if(!['pMil','pEco','pSci'].includes(ae&&ae.id)){$('#pMil').value=A2.policy.mil;$('#pEco').value=A2.policy.eco;$('#pSci').value=A2.policy.sci}
   ['#pMil','#pEco','#pSci'].forEach(s=>$(s).disabled=G.autopilot);
+  {const h=G.countries[G.playerCountry];if(document.activeElement!==$('#cMyEcon'))$('#cMyEcon').value=h.econType||'mixed';
+   const left=(G.econChanged||-99)+6-G.turn;$('#cMyEconD').textContent=NATION_ECON[h.econType||'mixed'].desc+(left>0?` Locked for ${left} more month${left>1?'s':''}.`:' You can switch every 6 months.')}
   pctLabels();
   $('#oAuto').checked=G.autoCommand;$('#oPilot').checked=G.autopilot;$('#oPause').checked=G.autoPause;
   const mem=members(G.playerAlliance).sort((x,y)=>pw(y)-pw(x));
@@ -1094,7 +1115,7 @@ function renderIntel(el){
     <p class="small"><span class="sw" style="background:${allyColor(al)}"></span> ${esc(al.name)} ${c.alliance===pa?'<span class="pill you">your alliance</span>':atWar(pa,c.alliance)?'<span class="pill war">at war</span>':'<span class="pill peace">at peace</span>'}</p></div>`;
   if(c.alive)h+=`<dl class="kv"><dt>Army</dt><dd>${fmt(c.army)}</dd><dt>Combat power</dt><dd>${fmt(pw(c))}</dd><dt>Economy</dt><dd>${fmt(c.econ)} (income ${(c.lastIncome||0).toFixed(1)}/mo)</dd>
     <dt>Science</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd><dt>Population</dt><dd>${(c.pop/1e6).toFixed(1)}M</dd>
-    <dt>Capital</dt><dd>${esc(c.capName)}</dd><dt>Foreign policy</dt><dd>${c.fp}</dd><dt>Status</dt><dd>${esc(statusOf(c))}</dd></dl>
+    <dt>Capital</dt><dd>${esc(c.capName)}</dd><dt>Economy type</dt><dd>${NE(c).name}</dd><dt>Foreign policy</dt><dd>${c.fp}</dd><dt>Status</dt><dd>${esc(statusOf(c))}</dd></dl>
     <p class="muted small">${FP_DESC[c.fp]}</p>`;
   const held=WD.cities.filter(ct=>G.owner[ct.cell]===c.id).sort((a,b)=>b.pop-a.pop);
   if(c.alive)h+=`<h3>Cities held (${held.length})</h3><p class="small">${held.map(ct=>esc(ct.name)+(ct.cell===c.capital?' ★':'')).join(' · ')||'<span class="muted">None</span>'}</p>`;
@@ -1188,8 +1209,8 @@ function renderGuide(el){
 
 /* ====================== setup screen ====================== */
 function fillSelect(sel,obj,def){sel.innerHTML=Object.entries(obj).map(([k,v])=>`<option value="${k}"${k===def?' selected':''}>${v.name}</option>`).join('')}
-fillSelect($('#sEcon'),ECON,'mixed');fillSelect($('#sMil'),MIL,'conv');fillSelect($('#sFp'),FP,'real');
-function descs(){$('#dEcon').textContent=ECON[$('#sEcon').value].desc;$('#dMil').textContent=MIL[$('#sMil').value].desc;$('#dFp').textContent=FP[$('#sFp').value].desc}
+fillSelect($('#sEcon'),ECON,'mixed');fillSelect($('#sMyEcon'),NATION_ECON,'mixed');fillSelect($('#sMil'),MIL,'conv');fillSelect($('#sFp'),FP,'real');
+function descs(){$('#dMyEcon').textContent=NATION_ECON[$('#sMyEcon').value].desc+' Stacks with the world policy. You can change it later in Command.';$('#dEcon').textContent=ECON[$('#sEcon').value].desc;$('#dMil').textContent=MIL[$('#sMil').value].desc;$('#dFp').textContent=FP[$('#sFp').value].desc}
 function showSetup(fresh){
   $('#setup').hidden=false;$('#game').hidden=true;$('#tabs').hidden=true;$('#hud').hidden=true;
   descs();if(fresh||!G)generate();
@@ -1211,10 +1232,12 @@ function renderSetupInfo(){
 }
 ['#sMap','#sCountries','#sAlliances'].forEach(s=>$(s).onchange=generate);
 ['#sEcon','#sMil','#sFp','#sLen','#sWin','#sCap','#sClock'].forEach(s=>$(s).onchange=()=>{descs();G.settings=readSettings()});
+$('#sMyEcon').onchange=descs;
 $('#bNewMap').onclick=generate;
 $('#bReassign').onclick=()=>{assignPlayer();G.dirty=true;renderSetupInfo()};
 $('#bStart').onclick=startGame;
 function startGame(){
+  G.countries[G.playerCountry].econType=$('#sMyEcon').value;G.econChanged=-99;
   G.settings=readSettings();G.started=true;G.turn=0;G.elapsed=0;G.speed=1;G.running=false;
   if(!FPD().peace)for(let i=0;i<G.alliances.length;i++)for(let j=i+1;j<G.alliances.length;j++)declareWar(i,j,true);
   const me=G.countries[G.playerCountry];
