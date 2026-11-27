@@ -35,6 +35,11 @@ main{flex:1;display:flex;min-height:0}
 #map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
 #zoom{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;flex-direction:column;gap:4px}
 #zoom button{width:34px;height:34px;background:rgba(14,27,41,.92);border:1px solid var(--line);color:var(--ink);font:600 16px var(--mono);border-radius:3px;cursor:pointer}
+#pop{position:absolute;z-index:6;width:248px;max-width:calc(100% - 16px);background:rgba(12,22,34,.97);border:1px solid var(--line);border-top:3px solid var(--pc,var(--amber));border-radius:4px;padding:10px 12px 12px;box-shadow:0 8px 24px rgba(0,0,0,.45);font-size:13px}
+#pop h2{font-size:16px;padding-right:22px}
+#pop .x{position:absolute;right:6px;top:6px;background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px}
+#pop .row{margin-top:10px}
+#pop .btn{flex:1}
 #tip{position:absolute;pointer-events:none;background:rgba(10,19,30,.95);border:1px solid var(--line);padding:6px 9px;font-size:12px;border-radius:3px;max-width:260px;z-index:5}
 #tip .st{font-family:var(--mono);color:var(--amber)}
 #legend{position:absolute;left:10px;top:10px;font:11px var(--mono);color:var(--muted);background:rgba(10,19,30,.78);padding:6px 8px;border:1px solid var(--line);border-radius:3px;max-width:60%}
@@ -135,6 +140,7 @@ ol,ul{padding-left:20px;margin:6px 0} li{margin:4px 0}
       <div id="legend"></div>
       <div id="zoom"><button id="zIn" title="Zoom in">+</button><button id="zOut" title="Zoom out">−</button><button id="zFit" title="Fit map">⤢</button></div>
       <div id="tip" hidden></div>
+      <div id="pop" hidden role="dialog" aria-label="Nation"></div>
     </div>
     <aside id="side">
       <div class="tabs" id="tabs" hidden>
@@ -898,23 +904,23 @@ function cellAt(clientX,clientY){const r=cv.getBoundingClientRect();const k=view
   if(x<0||y<0||x>=WD.W||y>=WD.H)return-1;return y*WD.W+x}
 cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1)drag={x:e.clientX,y:e.clientY,cx:view.cx,cy:view.cy,moved:false};
-  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:view.z};drag=null}});
+  else if(ptrs.size===2){hidePop();const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),z:view.z};drag=null}});
 cv.addEventListener('pointermove',e=>{
   if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];view.z=pinch.z*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(1,pinch.d);clampView();needDraw=true;return}
   if(drag&&ptrs.size===1){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>6)drag.moved=true;
-    if(drag.moved){const k=viewK();view.cx=drag.cx-dx*dpr/k;view.cy=drag.cy-dy*dpr/k;clampView();needDraw=true}}
+    if(drag.moved){hidePop();const k=viewK();view.cx=drag.cx-dx*dpr/k;view.cy=drag.cy-dy*dpr/k;clampView();needDraw=true}}
   if(e.pointerType==='mouse'&&!drag)hover(e);});
 function endPtr(e){const wasTap=drag&&!drag.moved&&ptrs.size===1;ptrs.delete(e.pointerId);
-  if(wasTap){const i=cellAt(e.clientX,e.clientY);tapCell(i);if(e.pointerType!=='mouse')showTip(e,i)}
+  if(wasTap){const i=cellAt(e.clientX,e.clientY);tapCell(i,e)}
   if(ptrs.size<2)pinch=null;if(!ptrs.size)drag=null}
 cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);drag=null;pinch=null});
 cv.addEventListener('pointerleave',()=>{$('#tip').hidden=true});
-cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();const k0=viewK();
+cv.addEventListener('wheel',e=>{e.preventDefault();hidePop();const r=cv.getBoundingClientRect();const k0=viewK();
   const mx=(e.clientX-r.left)*dpr,my=(e.clientY-r.top)*dpr;const wx=view.cx+(mx-cv.width/2)/k0,wy=view.cy+(my-cv.height/2)/k0;
   view.z*=e.deltaY<0?1.2:1/1.2;clampView();const k1=viewK();view.cx=wx-(mx-cv.width/2)/k1;view.cy=wy-(my-cv.height/2)/k1;clampView();needDraw=true},{passive:false});
-$('#zIn').onclick=()=>{view.z*=1.4;clampView();needDraw=true};$('#zOut').onclick=()=>{view.z/=1.4;clampView();needDraw=true};$('#zFit').onclick=fitView;
-function hover(e){const i=cellAt(e.clientX,e.clientY);showTip(e,i)}
+$('#zIn').onclick=()=>{hidePop();view.z*=1.4;clampView();needDraw=true};$('#zOut').onclick=()=>{hidePop();view.z/=1.4;clampView();needDraw=true};$('#zFit').onclick=fitView;
+function hover(e){if(!$('#pop').hidden){$('#tip').hidden=true;return}const i=cellAt(e.clientX,e.clientY);showTip(e,i)}
 function showTip(e,i){const tip=$('#tip');if(i<0||G.owner[i]<0){tip.hidden=true;return}
   const o=G.countries[G.owner[i]],og=G.countries[WD.origin[i]];const al=G.alliances[o.alliance];
   const ci=WD.cityAt[i],nc=nearestCity(i);const place=ci>=0?`<b>City of ${esc(WD.cities[ci].name)}</b> · ${WD.cities[ci].pop}M people`:nc.ct&&nc.d<=WD.W/24?`${esc(districtName(i))} district, ${nc.d<=1.5?'':'outskirts of '}${esc(nc.ct.name)}`:`${esc(districtName(i))} district`;
@@ -924,14 +930,57 @@ function showTip(e,i){const tip=$('#tip');if(i<0||G.owner[i]<0){tip.hidden=true;
   let x=e.clientX-r.left+14,y=e.clientY-r.top+14;if(x+250>r.width)x=Math.max(4,x-270);if(y+90>r.height)y=Math.max(4,y-100);
   tip.style.left=x+'px';tip.style.top=y+'px';
   if(e.pointerType!=='mouse'){clearTimeout(showTip.t);showTip.t=setTimeout(()=>tip.hidden=true,2500)}}
-function tapCell(i){if(i<0||G.owner[i]<0){return}
+function tapCell(i,e){if(i<0||G.owner[i]<0){hidePop();return}
   const prev=G.countries[G.sel],nc=G.countries[G.owner[i]];
   if(G.started&&!G.over&&!G.autopilot&&prev&&prev.alive&&prev.alliance===G.playerAlliance&&nc.alive&&atWar(G.playerAlliance,nc.alliance)&&linkOf(prev.id,nc.id)){
     prev.order=nc.id;addLog(`${prev.name} ordered to attack ${nc.name}.`,'p');toast(`${prev.name} will attack ${nc.name}`);chooseTargetsPreview();save();
   }
-  G.sel=G.owner[i];G.dirty=true;needDraw=true;
-  if(G.started){setTab('intel')}else{renderSetupInfo()}
+  G.sel=G.owner[i];G.dirty=true;needDraw=true;$('#tip').hidden=true;
+  if(G.started){if(tab==='intel')renderPanel()}else{renderSetupInfo()}
+  showPop(i,e);
 }
+// Map popup: nation name, alliance and quick actions (declare war, offer peace, attack, details)
+let popCell=-1,popXY=null;
+function hidePop(){$('#pop').hidden=true;popCell=-1}
+function showPop(i,e){
+  const pop=$('#pop'),c=G.countries[G.owner[i]],og=G.countries[WD.origin[i]],al=G.alliances[c.alliance],pa=G.playerAlliance;
+  popCell=i;if(e)popXY=[e.clientX,e.clientY];
+  const k=wkey(c.alliance,pa),truce=(G.truce[k]||0)>G.turn,war=atWar(pa,c.alliance),mine=c.alliance===pa;
+  let rel,acts='';
+  if(mine)rel=`<span class="pill you">${c.id===G.playerCountry?'your home nation':'your alliance'}</span>`;
+  else if(war)rel='<span class="pill war">at war with you</span>';
+  else rel=`<span class="pill peace">${truce?'truce until '+dateStr(G.truce[k]):'at peace with you'}</span>`;
+  if(G.started&&!G.over&&!mine){
+    if(!war)acts=`<button class="btn danger" data-pa="war">${truce?'Break truce: declare war':'Declare war'}</button>`;
+    else{const bord=members(pa).filter(m=>linkOf(m.id,c.id));
+      if(bord.length&&!G.autopilot)acts+=`<button class="btn primary" data-pa="attack">Attack (${bord.length})</button>`;
+      if(FPD().peace)acts+=`<button class="btn" data-pa="peace">Offer peace</button>`;}
+  }
+  if(G.started)acts+=`<button class="btn" data-pa="intel">Details</button>`;
+  const cityI=WD.cityAt[i];
+  pop.style.setProperty('--pc',al.color);
+  pop.innerHTML=`<button class="x" data-pa="close" aria-label="Close">×</button>
+    <div class="small muted">${esc(REGIONS.find(r=>r.key===c.region).name)} · capital ${esc(c.capName)}</div>
+    <h2>${esc(c.name)}</h2>
+    <p class="small" style="margin:4px 0"><span class="sw" style="background:${al.color}"></span> <b>${esc(al.name)}</b></p>
+    <p style="margin:4px 0">${rel}${c.alive?'':' <span class="pill war">annexed</span>'}</p>
+    <p class="small muted" style="margin:6px 0 0">${cityI>=0?'City of '+esc(WD.cities[cityI].name):esc(streetName(i))}${og.id!==c.id?` · occupied ${esc(og.name)} land`:''}</p>
+    ${G.started&&c.alive?`<p class="small mono muted" style="margin:4px 0 0">army ${fmt(c.army)} · ${c.cells} streets · ${c.fp}</p>`:''}
+    ${acts?`<div class="row">${acts}</div>`:''}`;
+  pop.hidden=false;placePop();
+  pop.querySelectorAll('[data-pa]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();const a=b.dataset.pa;
+    if(a==='close')hidePop();
+    else if(a==='intel'){hidePop();setTab('intel');if(window.innerWidth<=820)$('#side').scrollIntoView({behavior:'smooth'})}
+    else if(a==='war'){if(truce)addLog(`You broke the truce with the ${al.name}.`,'bad');declareWar(pa,c.alliance);toast(`War declared on the ${al.name}`);save();refreshUI();showPop(i)}
+    else if(a==='peace'){playerOfferPeace(c.alliance);showPop(i)}
+    else if(a==='attack'){for(const m of members(pa))if(linkOf(m.id,c.id))m.order=c.id;addLog(`All bordering members ordered to attack ${c.name}.`,'p');toast(`Attacking ${c.name}`);chooseTargetsPreview();save();refreshUI();showPop(i)}
+  });
+}
+function placePop(){const pop=$('#pop');if(pop.hidden||!popXY)return;const r=cv.parentElement.getBoundingClientRect();
+  const w=pop.offsetWidth,h=pop.offsetHeight;let x=popXY[0]-r.left+12,y=popXY[1]-r.top+12;
+  if(x+w>r.width-8)x=Math.max(8,popXY[0]-r.left-w-12);if(y+h>r.height-8)y=Math.max(8,r.height-h-8);
+  pop.style.left=x+'px';pop.style.top=y+'px'}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hidePop()});
 
 /* ====================== UI ====================== */
 let tab='command';
@@ -965,7 +1014,7 @@ function refreshUI(){
   if(!G||!G.started)return;
   $('#hDate').textContent=dateStr(G.turn);
   $('#hShare').textContent=shareOf(G.playerAlliance).toFixed(1)+'%';
-  updateClock();legend();renderPanel();syncSpeed();
+  updateClock();legend();renderPanel();syncSpeed();if(popCell>=0&&!$('#pop').hidden&&G.owner[popCell]>=0)showPop(popCell);
 }
 function updateClock(){const left=G.settings.len*60000-G.elapsed;$('#hClock').textContent=fmtClock(left)+' left';$('#hClockWrap').classList.toggle('warn',left<5*60000)}
 
@@ -1044,11 +1093,13 @@ function renderIntel(el){
         return`<div class="li" data-strike="${m.id}"><span class="sw" style="background:rgb(${countryRGB(m).join(',')})"></span><div class="nm">${esc(m.name)}<div class="sub">odds ${oddsWord(r)} · ${esc(statusOf(m))}</div></div><span class="pill ${m.order===c.id?'you':''}">${m.order===c.id?'ordered':'send'}</span></div>`}).join('')}</div>
         <div class="row" style="margin-top:8px"><button class="btn sm primary" data-strikeall="1">All bordering members attack</button></div>`:'<p class="small muted">None of your members border this nation yet.</p>');
     }else if(c.alliance!==pa&&!atWar(pa,c.alliance)){
-      h+=`<p class="small muted" style="margin-top:12px">You are not at war with the ${esc(al.name)}. Declare war in the World tab to attack.</p>`;
+      const tr=(G.truce[wkey(c.alliance,pa)]||0)>G.turn;
+      h+=`<p class="small muted" style="margin-top:12px">You are at ${tr?'truce':'peace'} with the ${esc(al.name)}.</p><div class="row"><button class="btn danger" data-decl="1">${tr?'Break truce: declare war':'Declare war on the '+esc(al.name)}</button></div>`;
     }
   }
   el.innerHTML=h;
   el.querySelectorAll('[data-ord]').forEach(b=>b.onclick=()=>{c.order=+b.dataset.ord;if(c.order>=0)addLog(`${c.name} ordered to attack ${cs[c.order].name}.`,'p');chooseTargetsPreview();save();renderPanel()});
+  const dc=el.querySelector('[data-decl]');if(dc)dc.onclick=()=>{if((G.truce[wkey(c.alliance,pa)]||0)>G.turn)addLog(`You broke the truce with the ${al.name}.`,'bad');declareWar(pa,c.alliance);toast(`War declared on the ${al.name}`);save();refreshUI()};
   el.querySelectorAll('[data-strike]').forEach(b=>b.onclick=()=>{const m=cs[+b.dataset.strike];m.order=c.id;addLog(`${m.name} ordered to attack ${c.name}.`,'p');chooseTargetsPreview();save();renderPanel()});
   const sa=el.querySelector('[data-strikeall]');if(sa)sa.onclick=()=>{for(const m of members(pa))if(linkOf(m.id,c.id))m.order=c.id;addLog(`All bordering members ordered to attack ${c.name}.`,'p');chooseTargetsPreview();save();renderPanel()};
 }
@@ -1091,6 +1142,7 @@ function renderGuide(el){
   <ol class="small">
     <li><b>Goal:</b> your alliance must control ${G.settings.win}% of the world's streets before the ${G.settings.len}-minute clock runs out. When time runs out, the alliance with the most land wins.</li>
     <li><b>Budget:</b> set Military / Economy / Science in Command. Money comes from the streets you hold. Occupied streets pay 70%.</li>
+    <li><b>Click any nation</b> to see its name, alliance and capital, and to declare war, offer peace or launch an attack from that card.</li>
     <li><b>Orders:</b> tap one of your nations, then an enemy (or tap an enemy and press <i>Send</i>). Several members hitting one target split its defence, so focused attacks win.</li>
     <li><b>Cities:</b> every capital and city on the map is a real one. Cities are worth several times a normal street in income, and capitals hold out until their nation is half conquered.</li>
     <li><b>Streets:</b> every square on the map is a street block. Fronts take them one by one. Hover or tap any square to see its street name.</li>
@@ -1120,7 +1172,7 @@ function showSetup(fresh){
   $('#setup').hidden=false;$('#game').hidden=true;$('#tabs').hidden=true;$('#hud').hidden=true;
   descs();if(fresh||!G)generate();
 }
-function generate(){newWorld(readSettings(),(Math.random()*2**31)|0);G.dirty=true;fitView();renderSetupInfo()}
+function generate(){hidePop();newWorld(readSettings(),(Math.random()*2**31)|0);G.dirty=true;fitView();renderSetupInfo()}
 function renderSetupInfo(){
   const pa=G.playerAlliance,me=G.countries[G.playerCountry],reg=REGIONS.find(r=>r.key===me.region);
   const cs=G.countries,n=cs.length;
@@ -1150,7 +1202,7 @@ function startGame(){
    <ul class="small"><li>Set your budget in <b>Command</b>.</li><li>Tap your nations, then enemies, to direct attacks. Idle members fight on their own.</li><li>Press a speed button (or space) to start the clock.</li></ul>`,
    [{label:'Take command',cls:'primary',fn:()=>{G.running=true;G.speed=1;syncSpeed()}}]);
 }
-function enterGame(){
+function enterGame(){hidePop();
   $('#setup').hidden=true;$('#game').hidden=false;$('#tabs').hidden=false;$('#hud').hidden=false;
   $('#game').innerHTML='';G.dirty=true;fitView();setTab('command');refreshUI();
 }
@@ -1170,7 +1222,7 @@ function frame(now){
   if(G&&(G.dirty||needDraw))draw();
   requestAnimationFrame(frame);
 }
-window.addEventListener('resize',()=>{resize();needDraw=true});
+window.addEventListener('resize',()=>{resize();needDraw=true;placePop()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 window.addEventListener('pagehide',save);window.addEventListener('beforeunload',save);
 
