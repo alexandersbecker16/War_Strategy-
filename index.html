@@ -86,7 +86,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .bar i{display:block;height:100%}
 .slider{display:grid;grid-template-columns:78px 1fr 44px;gap:10px;align-items:center;margin:8px 0}
 .slider span{font:600 11px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-input[type=range]{width:100%;accent-color:var(--amber)}
+input[type=range]{width:100%;accent-color:var(--amber);height:28px;touch-action:pan-y;cursor:pointer}
 .chk{display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-size:13px}
 .chk input{margin-top:3px;accent-color:var(--amber)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px}
@@ -1102,9 +1102,14 @@ function refreshUI(){
 }
 function updateClock(){const left=G.settings.len*60000-G.elapsed;$('#hClock').textContent=fmtClock(left)+' left';$('#hClockWrap').classList.toggle('warn',left<5*60000)}
 
+let dragging=null;   // the range slider the player is holding right now
+addEventListener('pointerdown',e=>{if(e.target.matches&&e.target.matches('input[type=range]'))dragging=e.target},true);
+addEventListener('touchstart',e=>{if(e.target.matches&&e.target.matches('input[type=range]'))dragging=e.target},{capture:true,passive:true});
+['pointerup','pointercancel','touchend','touchcancel'].forEach(t=>addEventListener(t,()=>{if(dragging){const d=dragging;setTimeout(()=>{if(dragging===d)dragging=null},150)}},true));
+const holding=el=>{const ae=document.activeElement;return(dragging&&el.contains(dragging))||(ae&&ae.matches&&ae.matches('input[type=range]')&&el.contains(ae))};
 function renderPanel(){
   if(!G||!G.started)return;const el=$('#game');
-  {const ae=document.activeElement;if(tab==='intel'&&ae&&ae.dataset&&ae.dataset.np!==undefined&&el.contains(ae))return}  // don't rebuild while a budget slider is held
+  if(tab==='intel'&&holding(el))return;  // don't rebuild while a budget slider is held
   if(tab==='command')renderCommand(el);else if(tab==='intel')renderIntel(el);else if(tab==='world')renderWorld(el);else if(tab==='log')renderLogTab(el);else renderGuide(el);
 }
 function renderCommand(el){
@@ -1133,10 +1138,11 @@ function renderCommand(el){
       <h3>Member nations <span class="muted small" style="text-transform:none;letter-spacing:0">· tap one, then tap an enemy on the map</span></h3>
       <div class="list" id="cmdMembers"></div></div>`;
     const setPol=p=>{const A=G.alliances[G.playerAlliance];A.policy={...p,conv:A.policy.conv||0};
-      if(G.tailor!==false){G.tailor=false;$('#oTailor').checked=false;toast('Tailored budgets off: every member without its own budget now uses these sliders')}
+      if(G.autopilot){G.autopilot=false;$('#oPilot').checked=false;toast('Autopilot off: you now set the budget')}
+      else if(G.tailor!==false){G.tailor=false;$('#oTailor').checked=false;toast('Tailored budgets off: every member without its own budget now uses these sliders')}
       ['mil','eco','sci'].forEach(k=>$('#p'+k[0].toUpperCase()+k.slice(1)).value=A.policy[k]);pctLabels();renderMembers();save()};
     [['#pMil','mil'],['#pEco','eco'],['#pSci','sci']].forEach(([s,k])=>$(s).oninput=()=>setPol(rebalance(normPol(G.alliances[G.playerAlliance].policy),k,+$(s).value)));
-    $('#pConv').oninput=()=>{G.alliances[G.playerAlliance].policy.conv=+$('#pConv').value;pctLabels();save()};
+    $('#pConv').oninput=()=>{if(G.autopilot){G.autopilot=false;$('#oPilot').checked=false}G.alliances[G.playerAlliance].policy.conv=+$('#pConv').value;pctLabels();save()};
     el.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const [m,e,s]=b.dataset.preset.split(',').map(Number);setPol({mil:m,eco:e,sci:s})});
     $('#convAll').onclick=()=>{let g=0,n=0;for(const c of members(G.playerAlliance)){const x=convertNow(c);if(x>0){g+=x;n++}}
       if(n){addLog(`Weapons program: ${n} member${n>1?'s':''} converted science into ${fmt(g)} troops.`,'p');toast(`+${fmt(g)} troops from science`)}else toast('Nothing to convert: already used this month, or science is at the minimum');save();renderPanel()};
@@ -1152,8 +1158,8 @@ function renderCommand(el){
   }
   const A2=G.alliances[G.playerAlliance];
   const ae=document.activeElement;
-  if(!['pMil','pEco','pSci','pConv'].includes(ae&&ae.id)){const np=normPol(A2.policy);$('#pMil').value=np.mil;$('#pEco').value=np.eco;$('#pSci').value=np.sci;$('#pConv').value=A2.policy.conv||0}
-  ['#pMil','#pEco','#pSci','#pConv','#convAll'].forEach(s=>$(s).disabled=G.autopilot);
+  if(!holding($('#cmdRoot'))){const np=normPol(A2.policy);$('#pMil').value=np.mil;$('#pEco').value=np.eco;$('#pSci').value=np.sci;$('#pConv').value=A2.policy.conv||0}
+  ['#pMil','#pEco','#pSci','#pConv','#convAll'].forEach(s=>$(s).disabled=false);
   {const mem=members(G.playerAlliance);const gain=mem.reduce((t,c)=>t+(c.lastConv||0),0);const avgSci=mem.reduce((t,c)=>t+c.sci,0)/Math.max(1,mem.length);
    const avgTm=mem.reduce((t,c)=>t+tm(c),0)/Math.max(1,mem.length);
    {const ready=mem.filter(c=>c.convTurn!==G.turn&&convNowAmt(c)>.001);const est=ready.reduce((t,c)=>t+convNowAmt(c)*convRate(c),0);
