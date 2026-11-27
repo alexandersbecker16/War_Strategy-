@@ -715,7 +715,14 @@ function betrayals(){
     if(rnd()<p){doBetray(c);return}
   }
 }
-function doBetray(T,dest){
+// Declare war on a nation inside your own alliance: it is expelled, forms its own bloc at war with you,
+// and the other members pick sides by their foreign policy (the same fracture rules as a betrayal).
+function warOnAlly(c){
+  if(c.alliance!==G.playerAlliance||c.id===G.playerCountry||!c.alive)return;
+  notify(`Declare war on ${c.name}?`,`<p><b>${esc(c.name)}</b> is your ally. Declaring war throws it out of the ${esc(G.alliances[G.playerAlliance].name)} and the two of you go to war at once.</p><p class="small muted">Your other members choose sides by foreign policy: Loyalists stay with you, Pragmatists back the stronger side, Opportunists may join ${esc(c.name)}, Isolationists may go neutral.</p>`,
+    [{label:'Cancel',fn:()=>{}},{label:'Declare war',cls:'danger',fn:()=>{doBetray(c,'new',true);G.sel=c.id;G.dirty=true;save();refreshUI()}}]);
+}
+function doBetray(T,dest,expel){
   const X=T.alliance,Xn=G.alliances[X].name,cs=G.countries;const playerIsTraitor=T.id===G.playerCountry;
   let Y;
   if(dest===undefined){
@@ -727,7 +734,7 @@ function doBetray(T,dest){
   T.alliance=Y;T.order=-1;T.target=-1;
   if(playerIsTraitor){G.playerAlliance=Y;G.alliances[Y].policy={...G.alliances[X].policy}}
   const pX=alliancePower(X),pY=alliancePower(Y);
-  const lines=[`<li><b>${esc(T.name)}</b> (${T.fp}) ${formed?`broke away and founded the ${esc(G.alliances[Y].name)}`:`defected to the ${esc(G.alliances[Y].name)}`}.</li>`];
+  const lines=[expel?`<li>You declared war on <b>${esc(T.name)}</b> (${T.fp}). It was thrown out of the ${esc(Xn)} and formed the ${esc(G.alliances[Y].name)}.</li>`:`<li><b>${esc(T.name)}</b> (${T.fp}) ${formed?`broke away and founded the ${esc(G.alliances[Y].name)}`:`defected to the ${esc(G.alliances[Y].name)}`}.</li>`];
   const indep=[];
   for(const M of members(X)){
     let res='stay';
@@ -737,6 +744,7 @@ function doBetray(T,dest){
     else if(M.fp==='Isolationist')res=rnd()<.35?'indep':'stay';
     if(res==='follow'){M.alliance=Y;M.order=-1;lines.push(`<li>${esc(M.name)} (${M.fp}) followed the traitor.</li>`)}
     else if(res==='indep'){const ni=createAlliance(M,'indep');M.alliance=ni;M.order=-1;indep.push(ni);lines.push(`<li>${esc(M.name)} (${M.fp}) declared neutrality and now stands alone.</li>`)}
+    else if(M.id===G.playerCountry)lines.push(`<li>${esc(M.name)} (your home nation) stays with the ${esc(Xn)}.</li>`);
     else lines.push(`<li>${esc(M.name)} (${M.fp}) stayed loyal to the ${esc(Xn)}.</li>`);
   }
   const F=FPD();
@@ -745,10 +753,10 @@ function doBetray(T,dest){
   if(!members(X).length)G.alliances[X].alive=false;
   G.lastBetrayal=G.turn;
   const involved=playerIsTraitor||X===G.playerAlliance||Y===G.playerAlliance;
-  addLog(`${T.name} betrayed the ${Xn}! The alliance fractured.`,involved?'bad big':'big');
+  addLog(expel?`You declared war on your own ally ${T.name}! The ${Xn} fractured.`:`${T.name} betrayed the ${Xn}! The alliance fractured.`,involved?'bad big':'big');
   {
-    notify(playerIsTraitor?'You broke the alliance':`Betrayal: ${T.name}`,
-      `<p>${playerIsTraitor?`Your nation left the ${esc(Xn)}.`:`${esc(T.name)} stabbed the ${esc(Xn)} in the back.`} Each member then chose a side according to its foreign policy:</p><ul>${lines.join('')}</ul>`,null,!involved);
+    notify(expel?`War on ${T.name}`:playerIsTraitor?'You broke the alliance':`Betrayal: ${T.name}`,
+      `<p>${expel?`You turned on your ally ${esc(T.name)}.`:playerIsTraitor?`Your nation left the ${esc(Xn)}.`:`${esc(T.name)} stabbed the ${esc(Xn)} in the back.`} Each member then chose a side according to its foreign policy:</p><ul>${lines.join('')}</ul>`,null,!involved);
   }
   computeLinks();
 }
@@ -960,6 +968,7 @@ function showPop(i,e){
   if(mine)rel=`<span class="pill you">${c.id===G.playerCountry?'your home nation':'your alliance'}</span>`;
   else if(war)rel='<span class="pill war">at war with you</span>';
   else rel=`<span class="pill peace">${truce?'truce until '+dateStr(G.truce[k]):'at peace with you'}</span>`;
+  if(G.started&&!G.over&&mine&&c.id!==G.playerCountry&&c.alive)acts=`<button class="btn danger" data-pa="allywar">Declare war on ally</button>`;
   if(G.started&&!G.over&&!mine){
     if(!war)acts=`<button class="btn danger" data-pa="war">${truce?'Break truce: declare war':'Declare war'}</button>`;
     else{const bord=members(pa).filter(m=>linkOf(m.id,c.id));
@@ -983,6 +992,7 @@ function showPop(i,e){
     else if(a==='intel'){hidePop();setTab('intel');if(window.innerWidth<=820)$('#side').scrollIntoView({behavior:'smooth'})}
     else if(a==='war'){if(truce)addLog(`You broke the truce with the ${al.name}.`,'bad');declareWar(pa,c.alliance);toast(`War declared on the ${al.name}`);save();refreshUI();showPop(i)}
     else if(a==='peace'){playerOfferPeace(c.alliance);showPop(i)}
+    else if(a==='allywar'){hidePop();warOnAlly(c)}
     else if(a==='attack'){for(const m of members(pa))if(linkOf(m.id,c.id))m.order=c.id;addLog(`All bordering members ordered to attack ${c.name}.`,'p');toast(`Attacking ${c.name}`);chooseTargetsPreview();save();refreshUI();showPop(i)}
   });
 }
@@ -1091,6 +1101,7 @@ function renderIntel(el){
   h+=`<h3>Street ledger</h3><dl class="kv"><dt>Home streets held</dt><dd>${home} / ${c.origCells}</dd><dt>Occupied streets</dt><dd>${occ}</dd></dl>`+
     (lostList?`<p class="small"><span class="muted">Lost to:</span> ${lostList}</p>`:'')+(heldList?`<p class="small"><span class="muted">Holds from:</span> ${heldList}</p>`:'');
   if(c.alive&&!G.over){
+    if(c.alliance===pa&&c.id!==G.playerCountry)h+=`<div class="row" style="margin-top:10px"><button class="btn sm danger" data-allywar="1">Declare war on ${esc(c.name)}</button></div>`;
     if(c.alliance===pa&&!G.autopilot){
       const enemies=[];for(const l of adj[c.id]){const d=cs[l.d];if(d.alive&&atWar(pa,d.alliance))enemies.push({d,l})}
       h+=`<h3>Orders for ${esc(c.name)}</h3><div class="row"><button class="btn sm ${c.order===-1?'primary':''}" data-ord="-1">Auto</button><button class="btn sm ${c.order===-2?'primary':''}" data-ord="-2">Hold &amp; defend (+10%)</button></div>`;
@@ -1109,6 +1120,7 @@ function renderIntel(el){
   }
   el.innerHTML=h;
   el.querySelectorAll('[data-ord]').forEach(b=>b.onclick=()=>{c.order=+b.dataset.ord;if(c.order>=0)addLog(`${c.name} ordered to attack ${cs[c.order].name}.`,'p');chooseTargetsPreview();save();renderPanel()});
+  const aw=el.querySelector('[data-allywar]');if(aw)aw.onclick=()=>warOnAlly(c);
   const dc=el.querySelector('[data-decl]');if(dc)dc.onclick=()=>{if((G.truce[wkey(c.alliance,pa)]||0)>G.turn)addLog(`You broke the truce with the ${al.name}.`,'bad');declareWar(pa,c.alliance);toast(`War declared on the ${al.name}`);save();refreshUI()};
   el.querySelectorAll('[data-strike]').forEach(b=>b.onclick=()=>{const m=cs[+b.dataset.strike];m.order=c.id;addLog(`${m.name} ordered to attack ${c.name}.`,'p');chooseTargetsPreview();save();renderPanel()});
   const sa=el.querySelector('[data-strikeall]');if(sa)sa.onclick=()=>{for(const m of members(pa))if(linkOf(m.id,c.id))m.order=c.id;addLog(`All bordering members ordered to attack ${c.name}.`,'p');chooseTargetsPreview();save();renderPanel()};
@@ -1152,7 +1164,7 @@ function renderGuide(el){
   <ol class="small">
     <li><b>Goal:</b> your alliance must control ${G.settings.win}% of the world's streets before the ${G.settings.len}-minute clock runs out. When time runs out, the alliance with the most land wins.</li>
     <li><b>Budget:</b> set Military / Economy / Science in Command. Money comes from the streets you hold. Occupied streets pay 70%.</li>
-    <li><b>Click any nation</b> to see its name, alliance and capital, and to declare war, offer peace or launch an attack from that card.</li>
+    <li><b>Click any nation</b> to see its name, alliance and capital, and to declare war, offer peace or launch an attack from that card. You can even declare war on one of your own allies: it gets expelled and your alliance fractures by foreign policy.</li>
     <li><b>Orders:</b> tap one of your nations, then an enemy (or tap an enemy and press <i>Send</i>). Several members hitting one target split its defence, so focused attacks win.</li>
     <li><b>Cities:</b> every capital and city on the map is a real one. Cities are worth several times a normal street in income, and capitals hold out until their nation is half conquered.</li>
     <li><b>Streets:</b> every square on the map is a street block. Fronts take them one by one. Hover or tap any square to see its street name.</li>
