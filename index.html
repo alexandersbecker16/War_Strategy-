@@ -148,7 +148,7 @@ ol,ul{padding-left:20px;margin:6px 0} li{margin:4px 0}
         <h2>Draft the world</h2>
         <p class="muted small">The real world map is carved into random nations. Each nation inherits strengths from the modern demographic bloc it sits in (North Atlantic, East Asia, the Gulf, Sub-Saharan Africa and so on), and the alliances are balanced so every bloc starts with exactly equal combined military, economic and scientific strength.</p>
         <div class="grid2">
-          <label class="f"><span>Map size</span><select id="sMap"><option value="small">Small (fast)</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></label>
+          <label class="f"><span>Map size</span><select id="sMap"><option value="small">Small (fast)</option><option value="medium" selected>Medium (HD)</option><option value="large">Large (HD)</option><option value="huge">Huge (ultra HD)</option></select></label>
           <label class="f"><span>Nations</span><select id="sCountries"><option>20</option><option>28</option><option selected>36</option><option>48</option></select></label>
           <label class="f"><span>Alliances</span><select id="sAlliances"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
           <label class="f"><span>Time limit</span><select id="sLen"><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90" selected>90 min</option></select></label>
@@ -189,8 +189,8 @@ const START_YEAR=2031;
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 // Real-world land masks (Natural Earth 1:50m land, public domain), Miller projection, 78N to 56S.
 // Each mask is run lengths in base 36, alternating sea/land, starting with sea.
-const WORLD={north:78,south:-56,masks:{small:{W:120,H:54,rle:"k.2.6.1.1.4.3.g.c.1.1.1.q.2.18.5.1.1.1.3.2.1.6.e.p.3.9.7.8.2.v.1.8.2.1.1.9.d.o.2.9.8.15.5.1.1.1.3.1.5.6.c.p.1.4.1.2.h.4.1.i.4.8.k.3.c.e.3.7.2.3.w.b.9.1.5.1.9.1.7.3.c.e.3.a.1.1.w.3.1.3.1s.8.4.7.1.z.1.2.1p.7.3.1g.q.3.4.4.4.6.2.8.4.1.1g.5.o.5.2.7.3.g.4.1.1g.6.5.2.h.5.3.8.1.g.4.1.19.2.2.b.2.5.f.5.5.j.1.3.1.1.2.2.13.6.1.m.f.3.6.i.1.4.2.2.13.6.2.n.o.g.1.1.1.3.18.5.2.o.n.h.1e.4.1.p.k.3.1.h.1d.v.k.k.1b.x.k.l.4.1.5.3.3.1.s.2.1.u.i.l.4.3.1.1.4.1.1.2.2.2.q.z.g.m.3.5.1.1.1.1.8.1.m.1.2.10.g.n.1.2.2.6.v.2.1.3.1.x.e.n.7.8.s.3.3.z.c.o.c.1.u.16.6.4.1.n.k.1.o.15.1.1.4.r.m.2.l.18.3.r.i.1.7.3.g.1a.3.2.1.3.1.j.i.1.7.4.5.2.5.1e.5.n.j.1.5.5.4.3.5.4.1.1c.3.m.n.8.2.6.3.1j.1.3.2.i.k.1.1.8.2.7.2.5.1.1e.8.g.l.9.1.e.1.1g.9.e.3.2.e.h.1.4.2.1i.9.k.c.h.2.3.2.1i.c.i.b.j.2.1.3.5.1.1c.e.h.9.l.2.8.4.19.f.g.9.o.1.8.3.19.e.g.9.29.d.h.a.t.2.2.1.1b.c.h.9.2.2.o.5.1.2.1b.b.h.8.3.1.o.9.1c.9.i.8.2.2.m.c.1a.9.k.7.3.1.m.d.19.8.l.6.r.d.19.7.n.4.s.d.19.7.n.3.t.4.2.7.19.5.1t.4.19.6.1u.3.8.1.10.4.39.2.26.2.11.3.26.1.12.3.39.2.3b.1.3b.1.2b"},medium:{W:160,H:73,rle:"t.2.a.4.4.m.f.2.2.1.y.2.1n.4.1.1.2.6.1.2.1.1.4.m.11.2.e.6.1m.5.2.3.1.6.9.h.y.3.b.b.b.3.1.1.13.3.d.1.d.g.x.2.c.c.1i.5.3.2.1.2.1.1.1.6.9.f.y.1.6.1.4.h.1.3.6.1.14.a.1.4.1.7.8.f.x.2.5.s.4.5.l.7.8.1.3.8.2.d.5.g.h.6.a.1.1.1.3.15.g.c.1.7.1.7.1.4.2.2.1.6.4.f.j.6.6.1.4.2.2.15.4.4.2.2e.a.6.9.1.1e.2b.c.2.c.1.1b.1.3.2a.9.3.1y.x.1.2.4.3.6.5.8.3.b.5.1.1x.8.w.a.2.7.3.m.5.1.1z.6.w.7.4.9.3.l.6.2.1o.1.6.b.4.1.1.4.k.7.4.2.1.u.7.1.1.1.1l.2.2.h.2.7.k.6.7.q.1.4.1.1.3.3.1g.7.2.h.1.a.l.5.7.p.1.5.3.2.1g.8.3.t.m.2.9.m.4.4.1.4.1g.8.3.u.m.1.a.l.1.1.2.2.1q.5.2.w.l.1.a.l.1.1.3.1.1q.13.u.1.1.p.1q.1.1.15.q.3.2.m.1s.17.q.s.n.1.13.17.r.r.e.4.4.2.12.2.1.15.o.r.6.2.2.1.6.5.3.2.11.3.1.15.m.t.5.5.2.1.3.1.9.2.y.4.1.16.m.t.4.7.1.1.1.2.a.2.t.1.3.5.1.17.k.u.3.5.1.1.1.5.b.1.u.2.2.3.2.17.k.v.1.1.6.b.11.3.2.1.3.1a.h.v.9.b.12.1i.g.w.b.2.5.1.13.1k.8.5.1.v.1n.1j.1.1.6.6.1.u.l.1.6.1.v.1m.5.10.u.6.o.1o.4.6.2.s.n.1.9.4.m.1.1.1n.4.3.1.4.2.p.p.1.8.5.8.2.7.1u.4.1.2.7.1.o.o.1.7.7.6.4.5.1.1.1v.6.v.p.1.5.9.4.5.6.5.1.1t.4.t.q.1.3.b.3.7.6.20.2.u.r.d.3.9.4.21.1.3.7.l.t.b.1.b.2.23.1.1.9.k.s.d.1.8.1.a.1.1y.b.j.4.2.k.n.1.5.2.20.c.r.h.m.3.4.2.21.d.q.g.o.2.2.5.1z.g.o.f.p.3.2.3.1.1.4.2.1s.j.m.d.r.2.4.1.1.2.4.5.1o.k.l.c.t.1.e.4.1o.k.l.c.v.2.b.4.1n.j.m.c.30.h.n.c.14.3.2.1.1q.h.m.d.3.1.y.5.2.1.1r.g.m.c.3.2.x.7.1.2.1s.d.n.b.4.2.w.b.1s.d.o.a.3.3.t.f.1r.b.q.a.3.2.t.h.1q.a.s.8.5.1.t.i.1o.a.t.8.z.i.1o.a.t.7.11.h.1o.9.v.5.12.h.1o.8.w.4.13.4.5.7.1p.7.2f.5.1o.8.2f.5.b.1.1c.6.2w.2.1c.4.2l.2.a.1.1e.4.2m.1.a.1.1e.4.2v.2.1f.3.4c.4.4c.4.4d.2.4e.3.4f.2.31"},large:{W:208,H:94,rle:"13.1.b.1.1.6.4.u.j.3.1.2.19.2.25.3.b.2.2.7.4.t.l.1.s.2.i.4.24.2.1.2.2.2.1.4.2.2.h.o.19.4.g.b.e.3.1n.6.3.1.1.2.1.7.c.o.16.3.f.f.e.4.2.2.1d.4.z.m.17.2.g.e.20.6.4.2.2.5.2.1.1.5.c.k.17.2.d.n.2.3.8.1.1g.c.2.3.1.1.2.2.1.6.b.j.17.2.8.2.3.1.1.s.6.3.l.5q.c.7.i.9.3.3.2.c.8.i.q.5.l.3.1.1d.m.e.2.9.2.9.1.4.4.2.2.6.8.1.1.f.o.9.g.2.2.3.1.1j.1.4.2.35.c.8.1.1.2.1.4.1.2.1.1.1.1q.32.f.4.e.1.1u.2z.c.1.2.3.f.1.1q.2.2.2z.6.2.5.3.2c.1.7.16.1.3.2.1.1.5.8.7.a.5.e.6.2.7.1.29.b.16.b.4.8.5.s.7.2.2j.8.17.8.3.3.1.9.5.r.7.2.2i.a.16.9.5.c.3.s.7.2.26.2.1.1.6.d.9.4.r.a.5.2.1.14.8.3.1.1.21.4.2.l.3.9.q.9.6.1.2.13.7.4.1w.a.2.n.1.1.1.9.1.1.o.8.9.x.2.6.1.1.3.4.1v.a.3.l.2.d.r.7.9.v.3.6.1.1.2.3.1w.a.4.k.1.h.s.2.c.t.4.6.2.5.1v.b.4.13.s.1.d.r.3.1.2.5.24.1.1.7.3.14.s.1.e.q.2.1.4.2.28.7.2.16.14.1.1.t.2c.1.1.1f.12.2.2.w.29.1.1.1h.z.3.3.s.2c.1.1.1h.z.5.2.t.29.2.1.1h.11.y.j.1.2.1.6.2.1e.1k.x.1.1.10.8.2.8.5.5.2.1e.3.1.1h.v.10.7.4.2.2.6.7.5.2.1c.3.3.1g.v.10.7.3.1.1.3.1.6.1.3.3.4.3.18.1p.t.12.5.5.1.3.1.1.3.1.e.2.12.1.4.7.1.1j.r.13.5.9.1.2.2.1.d.3.11.4.2.7.1.1j.r.13.4.6.1.6.1.3.d.2.13.3.2.4.2.1l.q.14.1.2.7.f.1c.4.2.2.4.1m.o.15.a.e.1e.5.4.1p.m.15.e.3.2.6.1e.5.1.1t.k.15.g.1.1n.1z.c.2.1.4.1.15.y.1.16.1z.1.1.8.8.2.12.10.2.14.21.1.1.7.9.1.12.s.1.8.4.10.25.6.1b.u.1.8.1.2.6.t.27.5.8.2.10.v.1.c.6.r.2.1.25.5.4.2.4.2.y.w.1.b.6.b.2.9.1.1.2b.6.2.2.9.2.v.v.1.a.9.8.4.7.2.1.2d.8.16.v.2.8.a.6.6.8.8.1.28.6.15.x.2.5.c.5.8.8.6.2.2c.5.12.y.1.4.e.3.b.6.7.1.2e.3.12.10.h.3.b.6.7.1.2f.2.5.4.u.y.2.3.e.2.b.1.2.3.2o.3.2.9.r.11.f.2.b.1.e.1.2i.b.r.10.h.1.a.1.d.2.2i.e.p.7.2.p.u.1.8.2.2m.f.z.n.s.1.1.2.6.2.2n.g.z.l.t.2.1.1.4.4.2m.h.y.k.w.3.3.5.2l.k.w.j.y.2.3.5.1.2.5.1.2d.m.u.h.10.2.3.3.2.2.5.6.27.q.s.g.10.2.8.2.7.6.25.r.r.g.12.2.h.5.1.1.23.q.r.g.14.2.f.3.1.2.25.o.t.f.1q.2.24.o.t.f.1n.1.29.m.t.g.5.1.1a.4.3.1.29.l.u.h.3.2.17.7.3.2.2a.k.t.g.3.3.16.9.1.3.2b.i.u.e.4.4.15.f.2a.i.u.d.6.2.15.h.29.h.w.d.4.3.12.k.29.g.x.d.4.3.12.l.28.e.z.c.5.2.13.m.27.d.11.a.1b.m.27.d.11.a.1b.n.26.c.13.8.1c.n.26.b.14.7.1e.l.27.b.14.6.1f.5.6.a.26.b.16.1.1j.2.9.9.27.9.35.7.d.1.1s.a.36.6.e.1.1s.7.3s.2.1q.7.3t.1.1r.6.3d.2.d.2.1s.6.3d.1.d.2.1t.5.3r.2.1u.4.3r.2.1v.5.5m.5.5n.5.5o.3.5.1.5j.3.5q.3.9r"}}};
-const MAP_SIZES={small:[120,54],medium:[160,73],large:[208,94]};
+const WORLD={north:78,south:-56,masks:{small:{W:160,H:73,rle:"t.2.a.4.4.m.f.2.2.1.y.2.1n.4.1.1.2.6.1.2.1.1.4.m.11.2.e.6.1m.5.2.3.1.6.9.h.y.3.b.b.b.3.1.1.13.3.d.1.d.g.x.2.c.c.1i.5.3.2.1.2.1.1.1.6.9.f.y.1.6.1.4.h.1.3.6.1.14.a.1.2.3.7.8.f.x.2.5.s.4.5.m.4.f.6.3.2.2.8.7.e.j.4.b.1.5.15.g.c.1.7.1.7.1.4.2.1.3.4.6.d.j.7.c.2.1.19.1.6.4.p.1.2.2.5.1.2.2.5.5.b.k.b.1.1.2.1q.4.10.3.6.3.9.l.c.1.1p.1.3.2.11.4.3.1.1.4.7.7.4.b.5.1.4.3.1q.8.x.1.2.4.3.6.5.8.3.b.5.1.1x.8.w.a.2.7.3.m.5.1.1z.6.w.7.4.9.3.l.6.2.1o.1.6.b.4.1.1.4.k.7.4.2.1.u.7.1.1.1.1l.2.2.h.2.7.k.6.7.q.1.4.1.1.3.3.1g.7.2.h.1.a.l.5.7.p.1.5.3.2.1g.8.3.t.m.2.9.m.4.4.1.4.1g.8.3.u.m.1.a.l.1.1.2.2.1q.5.2.w.l.1.a.l.1.1.3.1.1q.13.u.1.1.p.1q.1.1.15.q.3.2.m.1s.17.q.s.1r.17.r.r.e.4.18.2.1.15.o.r.6.2.2.1.6.5.16.3.1.15.m.t.5.5.2.1.3.1.19.4.1.16.m.t.4.7.1.1.1.2.15.1.3.5.1.17.k.u.3.5.1.1.1.5.16.2.2.3.2.17.k.v.1.1.6.b.11.3.2.1.3.1a.h.v.9.b.12.1i.g.w.b.2.5.1.13.1k.8.5.1.v.1n.1j.1.1.6.6.1.u.l.1.6.1.v.1m.5.10.u.6.o.1o.4.6.2.s.n.1.9.4.m.1.1.1n.4.3.1.4.2.p.p.1.8.5.8.2.7.1u.4.1.2.7.1.o.o.1.7.7.6.4.5.1.1.1v.6.v.p.1.5.9.4.5.6.5.1.1t.4.t.q.1.3.b.3.7.6.20.2.u.r.d.3.9.4.21.1.3.7.l.t.b.1.b.2.23.1.1.9.k.s.d.1.8.1.a.1.1y.b.j.4.2.k.n.1.5.2.20.c.r.h.m.3.4.2.21.d.q.g.o.2.2.5.1z.g.o.f.p.3.2.3.1.1.4.2.1s.j.m.d.r.2.4.1.1.2.4.5.1o.k.l.c.t.1.e.4.1o.k.l.c.v.2.b.4.1n.j.m.c.30.h.n.c.14.3.2.1.1q.h.m.d.3.1.y.5.2.1.1r.g.m.c.3.2.x.7.1.2.1s.d.n.b.4.2.w.b.1s.d.o.a.3.3.t.f.1r.b.q.a.3.2.t.h.1q.a.s.8.5.1.t.i.1o.a.t.8.z.i.1o.a.t.7.11.h.1o.9.v.5.12.h.1o.8.w.4.13.4.5.7.1p.7.2f.5.1o.8.2f.5.b.1.1c.6.2w.2.1c.4.2l.2.a.1.1e.4.2m.1.a.1.1e.4.2v.2.1f.3.4c.4.4c.4.4d.2.4e.3.4f.2.31"},medium:{W:240,H:109,rle:"19.1.f.7.5.y.m.3.2.2.1h.1.2i.3.d.1.3.8.5.z.m.2.w.2.l.4.2f.3.2.2.2.1.2.5.3.2.6.1.7.3.1.t.1h.5.i.1.1.a.2f.8.3.2.1.1.1.9.e.q.1f.4.h.h.f.6.1v.3.9.2.1.8.f.p.1e.3.i.h.h.1.1s.5.c.1.2.2.n.o.1e.3.j.h.i.1.1r.7.4.2.3.2.1.3.2.8.e.n.1e.2.g.q.2.4.1y.4.1.9.2.6.2.2.1.7.d.m.1e.2.9.3.5.w.7.4.1o.3.1.9.4.1.1.2.2.b.c.m.1d.3.8.3.1.11.2.1.1.1.1.8.y.4.n.a.5.2.3.d.a.1.1.h.1.2.u.1.1.2.g.2.7.3.1.1l.q.d.7.1.1.2.6.b.3.3.4.c.8.l.u.7.i.1.5.3.1.1m.5.1.1.1.g.h.1.c.1.a.2.2.1.3.3.3.3.6.b.h.r.1.1.c.8.1.7.4.2.3.1.1r.1.8.7.z.4.3.4.1.1.4.1.3.4.7.9.f.u.g.3.2.2.g.1.21.8.1j.3.1.2.6.6.e.w.i.1.1.2.g.1.25.4.1.1.1h.6.8.5.d.c.1.j.i.1.2k.1.5.2.1i.1.1.6.5.1.2.7.9.a.7.h.7.1.7.4.2l.3.2.4.1k.3.8.9.8.c.5.h.7.2.8.1.2m.d.1c.2.2.1.1.6.5.9.7.d.3.h.8.1.2w.b.1d.5.1.8.4.9.6.w.8.2.2y.9.1d.a.4.f.5.n.1.7.9.2.2v.d.1b.b.6.e.4.v.9.2.2i.5.6.h.6.1.1.6.v.b.6.2.1.1a.a.6.2c.4.2.n.6.a.t.b.6.2.2.13.1.6.8.3.28.b.2.r.3.b.t.b.a.11.2.a.3.5.26.b.4.p.1.g.u.8.a.11.2.7.2.1.3.3.26.c.5.n.2.h.w.6.b.10.3.6.4.5.25.d.4.19.w.2.e.x.2.1.2.7.1.1.1.2.28.d.4.17.1.1.x.1.g.u.3.2.2.4.2i.1.1.8.3.1b.w.1.g.u.3.1.4.2.2l.8.2.1d.1c.y.4.1.2k.1.1.8.1.1e.15.1.2.2.2.12.2l.1.1.1o.15.4.3.z.2n.1.1.1p.14.4.4.w.2o.1s.14.2.1.13.q.1.1u.1t.16.14.l.2.2.1.1u.1u.11.2.1.16.a.1.9.7.1t.3.2.1p.10.15.8.5.2.2.8.8.1r.4.3.1o.10.15.8.6.3.2.6.2.3.4.1n.1y.y.17.6.6.1.3.2.1.3.1.1x.7.2.1q.x.18.6.d.3.1.1q.2.1.1.2.8.2.1r.v.19.6.9.1.4.2.2.1p.4.3.7.1.1t.u.1b.1.4.6.c.1q.3.2.5.3.1t.u.1b.1.2.8.h.1k.4.2.2.6.1u.s.1b.c.h.1k.7.4.1z.p.1b.g.4.1.8.1m.6.1.22.o.1b.i.2.6.1.1p.2a.1.1.g.2.3.1b.13.1.1c.2b.c.9.1.1a.14.2.1b.2b.1.1.9.a.2.18.w.1.9.2.19.2d.1.1.8.b.1.17.x.1.a.4.16.2d.2.1.7.1j.y.1.a.1.2.7.y.1.1.2g.6.a.2.16.z.2.e.6.w.2.1.2h.5.6.1.5.2.14.10.1.e.6.c.3.e.2n.6.4.2.7.1.13.10.2.c.9.a.4.9.2.1.2p.6.1.4.a.2.z.10.2.b.b.7.7.8.1.2.2r.8.1c.11.2.9.c.6.8.8.9.2.2l.1.1.7.19.11.2.7.e.5.b.7.8.1.2q.6.18.13.1.4.g.4.c.8.7.1.2t.2.19.15.k.4.c.7.7.1.1.1.2r.2.7.3.10.13.4.1.g.3.c.2.2.4.8.1.2t.2.4.a.w.17.h.2.h.1.b.1.2u.2.1.c.v.17.h.1.1.1.c.1.f.2.2w.d.v.15.k.2.b.2.f.1.2w.h.t.6.3.t.v.1.3.2.8.2.31.i.14.q.w.2.1.2.7.3.31.i.15.o.y.4.5.5.30.k.13.n.11.3.4.6.1.1.1.1.2.1.2s.m.12.m.13.2.4.5.9.2.2p.p.z.l.14.4.2.5.1.2.7.2.1.2.2l.s.x.k.15.3.5.1.2.3.7.7.2i.u.w.i.17.2.k.6.3.2.2c.v.v.i.18.4.i.6.5.1.2b.u.w.h.1b.3.g.4.1.2.2h.s.x.i.1k.1.e.2.2g.r.y.i.4i.q.y.i.1o.4.3.2.2l.p.y.j.5.1.1f.1.1.5.3.2.2m.o.y.j.4.2.1e.8.3.3.e.1.28.m.y.i.3.4.1d.b.1.3.2o.l.y.g.5.4.1c.h.2n.k.z.f.7.3.1b.j.2m.k.10.f.5.3.19.n.2l.j.12.e.5.3.18.p.2k.g.15.e.5.3.18.p.2k.f.16.c.8.1.19.q.2j.f.16.c.1i.q.2i.g.17.b.1i.q.2i.f.18.a.1k.p.2i.e.1a.8.1l.p.2i.d.1b.7.1m.7.5.d.2i.d.1b.6.1n.5.8.b.2j.a.38.1.d.9.2i.b.3n.7.2j.b.3n.7.g.3.20.9.4c.3.20.8.4d.2.21.6.3v.3.f.2.22.7.3w.2.f.2.23.5.4c.3.23.6.4b.3.24.5.4d.1.26.5.6i.5.6j.5.6j.4.6l.3.6.1.6e.4.6m.3.6m.1.4l"},large:{W:320,H:145,rle:"1n.3.c.3.5.1.1.7.6.19.v.3.3.3.5c.3.9.1.f.8.7.1b.t.3.22.4.3a.5.1.1.4.1.6.1.3.3.1.1.1.b.7.17.2.1.u.1.17.3.t.9.34.3.2.4.2.2.4.5.5.2.j.2.4.11.20.6.o.1.1.f.m.1.2i.1.1.6.1.3.3.4.2.1.2.5.1.5.j.z.1x.4.o.l.l.7.2g.1.1.7.5.2.1.3.1.b.k.x.1.1.1u.4.o.m.m.5.3.4.24.3.6.2.1d.x.1u.3.p.l.2.1.30.8.e.3.1.4.v.w.1u.3.p.l.1.1.q.2.2a.9.6.3.3.3.2.4.2.b.i.v.1v.2.c.1.8.o.1.a.4.4.c.1.2a.c.1.1.1.2.3.5.1.2.3.3.1.5.1.3.i.t.1v.3.b.4.7.17.a.3.28.5.1.d.3.4.1.1.4.e.h.t.1u.3.c.4.1.1.1.4.1.16.9.5.1.3.r.2.1c.3.2.c.5.1.2.2.3.g.f.1.1.s.1t.4.a.4.1.2.1.1b.2.2.1.e.19.5.v.c.7.4.3.h.e.1.1.n.1.3.15.1.1.1.n.3.8.6.1.7.1.1w.h.1.g.d.h.1.a.d.4.4.4.i.b.t.13.8.p.1.7.5.1.24.x.k.5.1.1.6.1.1.1.2.3.d.4.1.1.4.5.3.4.9.b.s.11.d.o.4.3.2b.1.2.2.2.1.7.g.o.1.h.3.a.3.3.1.3.1.1.3.4.4.7.g.m.10.1.1.i.a.1.3.1.6.5.2.4.1.2d.1.a.a.1a.6.3.6.1.2.6.1.4.7.7.c.m.12.m.4.2.4.k.1.2q.a.1d.1.i.1.4.4.2.2.8.9.j.16.n.3.2.2.m.1.2t.8.20.8.a.7.i.16.p.2.2.1.m.1.2w.4.2.1.1x.9.b.7.h.a.1.5.1.p.j.2.4.1.3n.3.22.9.6.2.2.9.d.d.2.1.6.n.9.2.9.5.3g.4.3.5.22.5.a.c.b.g.8.m.9.3.9.2.1.2.3g.h.1t.1.4.4.1.3.7.c.a.g.7.m.a.2.b.1.3h.j.1r.4.1.2.1.8.7.b.a.i.2.o.a.2.3v.e.1u.7.1.a.3.1.1.d.8.17.a.3.3x.d.1s.c.1.1.4.5.1.f.7.16.b.3.3i.1.a.g.1t.e.6.j.6.16.b.4.3c.3.2.2.8.j.f.2.1a.f.7.l.3.16.c.3.3b.6.9.j.1.1.a.1.2.7.16.f.7.4.1.h.1.18.c.8.34.6.4.t.7.e.13.f.7.3.3.1p.b.5.2y.8.3.4.3.z.3.f.1.1.11.e.d.1f.2.8.3.2.5.6.2x.f.3.10.2.1.1.f.13.e.d.1e.3.c.5.1.1.2.1.2.2v.f.5.y.2.2.1.g.15.b.d.1e.3.9.2.2.4.4.2w.g.6.w.2.m.16.9.e.1d.3.9.2.2.2.6.2v.g.6.1l.1.1.17.4.h.1a.1.2.3.8.4.8.2u.h.6.1o.17.2.k.17.3.2.3.8.1.2.1.2.30.g.5.s.1.u.1.1.17.3.k.15.4.2.3.6.3b.1.1.c.3.1r.17.2.k.15.4.1.5.3.3f.c.2.1t.16.2.l.14.2.3.5.3.3f.c.2.1t.1q.1.2.19.5.1.3f.1.2.b.1.1u.1k.3.1.3.1.1f.3g.1.2.28.1g.4.1.3.4.1a.3j.1.2.29.1.1.1g.5.4.18.3l.1.1.2a.1h.7.4.18.3j.2.1.2b.1h.9.1.19.z.1.2h.3.2.2a.1l.1g.s.2.2.3.2g.2g.1f.1.3.1i.c.2.d.4.2.1.2g.5.1.2b.1c.3.1.1l.8.2.2.3.b.a.2e.5.3.28.1c.1j.b.6.3.3.a.b.2c.5.4.28.1c.1j.b.7.3.4.8.c.27.8.1.2d.1a.1k.a.6.1.3.3.2.8.1.1.1.5.3.27.2m.19.1m.8.7.2.4.2.2.4.2.2c.1.6.a.2.2c.18.1m.8.7.2.5.1.3.2.3.2b.2.1.2.3.a.2.2c.17.1n.8.e.1.4.3.1.2a.6.3.a.2.2d.15.1o.7.d.2.5.2.3.2d.4.2.8.2.2f.15.1p.2.4.a.g.1.1.2.2.23.5.3.6.4.2f.14.1q.2.2.c.c.1.9.22.6.3.3.7.2g.12.1r.f.n.23.5.1.3.5.2m.z.1r.h.l.24.9.3.2p.x.1r.m.4.3.a.25.8.1.2r.2.1.t.1r.n.4.7.2.2.1.26.31.1.1.m.1.6.1r.39.32.1.1.g.3.1.6.2.1r.1g.2.1r.32.2.1.d.c.2.1p.1i.2.1r.32.2.2.b.e.2.1n.16.2.c.3.1o.35.1.2.b.d.2.1m.18.1.d.6.1j.36.2.2.a.21.18.2.d.3.1.9.1b.37.1.3.8.21.1a.2.h.9.19.2.1.3a.7.d.3.1k.1b.2.j.8.17.3.1.3a.7.c.1.2.3.1i.1c.2.i.9.i.2.j.3h.8.6.3.7.3.1g.1c.2.h.b.1.1.c.5.d.2e.1.18.8.5.3.d.3.1b.1c.3.f.e.c.6.b.3.1.3m.8.1.5.d.4.1b.1c.3.e.e.a.9.a.3.1.3o.c.1s.1d.2.c.g.9.a.b.c.2.3f.9.1s.1e.3.9.i.8.b.c.b.2.3k.9.1n.1f.2.8.j.6.g.a.a.1.3m.8.1n.1g.1.6.m.5.g.a.a.2.3o.5.1n.1k.p.5.g.a.a.1.3r.3.1n.1h.t.4.g.2.2.6.e.1.3o.2.7.6.4.1.17.1g.2.4.m.4.h.1.3.5.b.1.3r.2.7.3.1.9.16.1l.n.2.n.2.e.1.3s.5.1.e.16.1l.n.2.1.1.f.2.m.1.3s.1.1.i.15.1j.r.2.f.1.k.4.3u.i.15.1i.r.2.g.2.c.2.5.2.3v.m.13.8.5.12.16.1.3.3.b.3.41.n.1i.y.17.2.2.3.9.4.42.o.1i.x.18.3.1.2.8.5.41.p.1i.v.1b.3.1.2.6.6.40.q.1h.v.1d.4.5.9.1.4.2.1.3q.t.1f.u.1f.3.5.7.40.w.1c.t.1g.4.4.7.2.3.7.3.3l.y.1b.r.1i.5.3.6.2.2.9.3.1.4.3f.12.18.q.1j.3.8.1.3.1.1.1.3.1.5.a.3c.13.17.p.1l.2.c.1.1.1.c.9.4.1.35.15.16.o.2g.8.1.3.36.14.16.o.1n.6.n.8.3b.13.17.n.1r.4.a.1.a.5.2.2.3a.13.17.n.23.2.e.1.4.2.3a.11.18.o.5z.10.19.o.28.1.1.1.7.1.3h.y.1a.o.7.1.20.6.4.2.3g.x.1a.p.7.2.1y.6.5.2.3h.w.1a.p.6.3.1u.3.1.6.5.3.3h.v.19.q.4.4.1v.b.4.3.3j.t.19.p.4.5.1t.f.1.5.3j.s.19.n.6.5.1s.m.s.1.2q.s.1a.l.7.5.1s.n.3j.q.1c.j.8.4.1q.r.3i.q.1c.j.8.4.1o.u.3h.p.1e.j.6.5.1m.x.3f.n.1h.j.7.3.1n.x.3f.l.1j.i.8.3.1n.y.3e.k.1k.g.20.z.3d.k.1k.g.20.z.3d.k.1l.f.20.z.3c.k.1n.e.21.z.3c.j.1n.d.22.y.3c.i.1p.c.23.y.3c.i.1q.a.25.c.2.j.3c.h.1r.9.26.8.8.g.3d.h.1r.7.27.8.a.f.3d.d.1.2.47.2.f.1.2.b.3d.e.4v.a.k.1.2s.f.4u.9.m.1.2r.e.4w.8.m.2.1.1.2o.c.50.1.r.4.2o.a.5u.2.2p.b.5u.2.2p.8.57.3.l.2.2r.9.56.3.k.2.2t.7.58.1.k.3.2s.8.5r.4.2t.7.5r.4.2t.7.5t.2.2v.7.8o.8.8o.7.8q.6.8p.6.8r.5.8.1.8i.5.8s.2.1.1.8t.4.8t.4.ez"},huge:{W:400,H:181,rle:"22.4.f.1.8.2.1.8.9.1k.12.4.4.3.6p.1.1.1.4.1.7.1.f.1.3.a.b.1i.12.4.5.1.2f.5.44.5.m.2.6.c.8.1n.11.2.1j.2.10.7.42.3.1.1.8.2.4.1.2.4.2.k.a.1h.2o.4.z.e.3v.3.3.5.3.2.4.8.5.3.o.2.6.1a.2g.9.t.3.1.i.r.2.2.1.32.1.1.7.1.5.3.6.2.1.2.4.4.6.o.17.2e.7.t.q.q.9.31.c.2.1.3.3.2.3.1.e.o.16.2.1.2b.5.t.t.q.9.2.4.2y.4.h.2.2.d.q.15.2c.5.t.s.u.1.2z.5.1y.15.2b.4.v.q.2.2.3s.9.h.4.2.5.4.2.x.13.2b.4.v.1.1.o.1.2.1.1.u.3.2v.b.8.3.4.4.2.5.2.4.1.9.n.12.2c.3.f.1.a.u.2.b.5.6.e.2.2u.c.1.2.1.1.2.3.3.6.2.4.3.3.1.a.n.12.2b.3.f.3.a.1i.39.6.1.b.1.3.4.6.1.2.4.4.1.5.1.1.1.4.l.12.2a.4.e.5.2.1.2.1.3.1i.b.8.2q.5.2.g.5.4.1.2.4.4.1.d.k.11.2a.5.e.5.1.2.1.5.2.1f.c.b.y.2.1p.3.3.f.6.1.2.3.4.5.1.f.i.1.1.z.2a.4.d.5.1.3.1.7.1.1f.3.5.1.f.v.2.o.3.15.f.9.4.4.l.i.1.2.t.1.3.1f.1.2.2.s.4.a.7.1.1r.1.n.2.6.m.1.l.e.14.b.7.5.3.n.g.w.1h.9.v.1.9.6.1.a.1.2d.15.n.c.2.1.2.2.1.8.i.5.4.8.2.1.4.2.b.e.10.1b.b.w.2.7.7.1.2o.9.1.1.3.q.s.4.1.1.2.1.7.1.4.4.g.3.3.2.4.6.4.6.b.e.2.1.u.1a.i.h.1.c.5.3.6.1.2x.3.9.1.1.g.v.1.l.1.1.2.6.3.4.3.4.1.4.1.2.3.5.5.1.1.8.i.t.18.1.2.m.d.2.3.1.5.1.1.7.2.5.3.1.1.38.d.1m.6.4.8.2.2.7.3.4.7.1.1.8.f.s.1c.q.6.2.6.3.1.l.1.3e.c.1j.5.1.2.6.4.3.1.8.1.6.5.4.1.9.c.o.1h.s.4.3.2.r.2.3f.c.23.1.g.4.2.3.a.b.n.1h.u.3.1.3.r.2.3j.b.2h.a.d.9.l.1h.v.3.u.2.3m.4.3.2.2c.2.1.b.7.1.5.9.l.e.1.5.2.v.o.3.4.1.4l.3.2i.1.1.c.7.2.3.b.i.e.b.u.b.2.c.6.4b.5.4.6.2g.1.3.7.c.2.2.c.e.j.a.s.b.4.b.2.1.2.4c.6.2.7.5.1.2a.1.5.4.e.f.d.k.9.s.c.3.c.2.4c.o.29.2.6.9.9.f.c.k.7.t.c.3.f.1.4d.a.2.9.27.6.1.3.1.3.1.6.4.1.3.f.c.n.2.t.d.3.4u.i.2a.8.2.c.4.2.1.g.a.1i.d.3.4w.g.29.a.1.3.1.1.3.1.2.4.3.i.9.1h.e.3.4e.2.d.k.28.f.1.1.7.p.8.1g.e.5.47.3.3.1.c.m.28.h.8.p.7.1g.e.5.46.4.1.3.a.o.f.1.3.2.1m.j.9.q.3.1i.e.4.45.7.a.o.2.2.1.1.a.1.4.8.1g.j.9.4.2.l.2.1i.f.4.1.6.3w.7.3.12.9.3.1.c.1e.i.a.4.2.25.f.5.3q.2.4.2.4.6.3.16.6.i.1d.h.b.2.4.1u.1.9.4.2.7.6.3p.j.4.1.1.16.3.2.1.h.1d.h.h.1p.1.1.2.b.2.4.6.8.3l.k.4.18.3.1.2.j.1c.i.g.1q.5.d.1.1.6.1.1.3.1.2.3k.j.7.16.3.o.1f.e.h.1p.5.b.3.2.5.4.3n.k.7.15.2.r.1.1.1e.c.g.1q.4.c.3.2.4.5.3m.k.8.13.2.u.1h.9.j.1p.4.b.7.7.3l.l.7.11.1.y.1l.3.n.1k.8.a.2.b.3l.m.7.23.1i.3.o.1h.5.2.4.a.2.1.2.3.3q.2.1.i.5.10.1.11.1.2.1i.3.q.1f.4.4.3.8.44.2.1.e.5.26.1i.2.q.1g.3.2.6.5.47.1.1.e.4.28.1h.3.p.1f.4.2.7.3.4a.f.2.2a.1h.1.q.1f.1.5.6.3.49.1.1.f.1.2b.25.2.1.1l.6.1.4a.2.2.2q.1x.2.4.3.1.1l.2.5.4b.2.2.2r.1u.4.2.4.3.1o.1.1.4c.2.2.2t.1r.1.4.6.5.1m.4e.2.1.2v.1.1.1s.6.7.1i.4g.3.1.2v.1u.a.3.1k.4e.3.1.2v.1u.4.1.7.1.1l.17.1.34.4.1.2v.1x.1.1.1t.10.3.2.3.33.31.1t.1.4.1v.f.1.i.4.3.1.33.5.1.2w.1r.2.3.1x.f.3.f.5.1.4.31.6.2.2v.1o.5.1.1y.b.2.4.2.f.c.2z.6.4.2t.1o.1w.e.2.1.5.3.4.c.e.2w.7.5.2t.1n.1x.e.6.1.2.3.5.a.f.2r.a.2.1.2.2u.1o.1w.d.b.4.4.a.3.5.6.2q.c.1.2x.1l.1z.b.8.2.5.4.2.5.1.3.1.34.c.1.2x.1k.20.a.9.2.6.2.3.3.4.2x.1.8.c.3.2w.1j.21.a.9.2.7.1.4.3.3.2v.3.1.3.3.d.3.2x.1i.21.a.n.4.3.2t.8.4.c.2.2z.1g.22.9.f.3.7.2.4.2u.2.1.5.3.b.3.2z.1f.25.6.9.5.4.1.7.2.5.2x.5.3.8.5.30.1f.25.1.6.c.l.1.2.2.2.2m.7.3.7.5.32.1d.26.2.3.e.s.2l.7.4.3.9.32.1c.27.j.s.2l.7.2.4.6.38.19.27.k.r.2n.b.6.3b.16.26.o.p.2n.a.3.3f.14.27.s.5.4.d.2o.a.1.3g.2.1.11.27.t.4.9.2.3.2.2p.3s.2.1.10.27.w.1.35.3t.1.2.q.4.1.1.3.27.1t.2.28.3t.1.1.j.e.2.26.1u.2.27.3u.2.1.g.g.3.23.1g.1.f.3.26.3u.3.1.f.g.3.22.1h.2.f.4.23.3x.1.2.e.h.2.21.1i.2.g.7.1y.3y.2.2.d.i.1.21.1j.2.g.5.1.2.1w.3y.2.3.c.l.1.1x.1k.2.g.4.2.b.1m.2.1.3y.1.3.a.2j.1l.3.m.b.1k.2.2.43.9.g.4.1z.1m.3.n.b.1g.4.2.44.8.f.1.3.4.1v.1o.2.n.b.o.1.o.4d.9.8.4.9.2.1u.1o.2.n.c.2.1.g.5.i.2.1.4g.9.7.4.b.3.1t.1n.3.l.g.f.7.f.31.1.1j.a.6.4.g.4.1n.1n.4.j.h.e.9.e.3.2.4i.9.3.5.h.5.1m.1o.4.h.i.d.b.d.3.2.4k.f.c.1.1v.1p.4.f.j.c.c.d.g.2.49.d.28.1q.3.d.l.b.d.e.f.2.4b.3.1.7.1.1.26.1q.3.b.o.8.f.1.2.c.d.2.4i.a.22.1s.3.9.p.7.k.c.c.2.4j.a.21.1t.2.6.t.6.k.c.d.1.4m.6.22.1u.1.3.w.6.k.d.c.1.2.1.4l.4.22.1v.z.6.l.1.2.9.c.1.2.2.4l.3.c.1.2.1.1o.1t.8.1.r.5.k.2.3.7.i.1.4l.2.9.8.1o.1t.1.7.r.5.k.2.4.5.c.1.3.1.1.1.4m.3.8.4.1.b.1h.20.s.3.l.1.6.2.i.1.4q.7.1.h.1h.1z.t.2.2.1.j.2.5.1.m.1.4p.2.2.l.1g.1y.x.2.i.3.o.5.4s.m.1f.1x.y.2.j.2.q.3.4t.m.1g.e.3.1e.y.1.l.3.f.2.7.2.4u.r.1c.b.6.1c.1g.1.5.3.d.4.52.t.1c.1.e.2.2.17.1h.3.3.3.c.4.53.t.1w.15.1j.3.2.3.b.5.52.v.1v.14.1l.3.2.2.9.7.51.w.1v.13.1n.4.1.2.5.1.1.8.b.1.4o.x.1u.13.1p.4.7.b.2.5.2.2.4o.y.1t.12.1r.4.6.a.2.1.4w.13.1p.11.1s.5.6.8.3.1.1.2.9.3.4h.14.1o.10.1u.4.1.1.4.7.3.3.c.2.3.3.4c.17.1l.y.1v.7.3.7.3.4.b.3.1.7.48.1b.1j.w.1x.5.9.2.3.4.4.1.1.1.5.c.46.1c.1j.v.1y.4.f.1.1.2.e.b.6.2.3w.1f.1g.u.21.2.f.1.j.9.5.2.3x.1f.1h.u.21.3.t.1.4.a.8.1.3u.1e.1h.u.22.8.s.a.44.1d.1i.t.27.4.4.1.l.7.2.3.44.1c.1h.u.2e.1.7.2.h.2.4.2.44.1b.1j.t.2h.1.3.2.p.4.41.1a.1k.u.7h.18.1l.u.2s.1.1.2.9.1.4c.17.1l.u.9.1.2i.7.5.2.4c.16.1l.v.9.2.2g.7.6.3.4b.16.1l.v.8.3.2c.2.2.7.6.4.4b.15.1k.w.7.4.2b.c.6.4.o.1.3o.13.1k.w.5.6.2a.f.4.5.4e.11.1k.u.6.6.29.j.2.5.4f.z.1l.s.8.6.29.q.z.1.3g.y.1m.q.9.6.28.s.4f.y.1m.p.a.5.28.u.4e.x.1o.o.a.5.25.y.4d.x.1o.o.9.6.22.12.h.2.3t.w.1q.n.9.5.22.14.4b.t.1t.n.9.5.21.16.4a.r.1v.n.a.4.21.16.4a.p.1x.n.a.3.22.17.48.p.1y.l.2h.18.47.p.1z.k.2h.18.47.p.1z.k.2h.19.46.p.20.i.2j.18.46.o.21.h.2k.18.46.o.22.g.2l.16.46.n.24.f.2m.16.46.m.26.d.2n.16.47.l.26.c.2p.d.6.m.46.m.26.b.2p.a.b.k.47.l.27.9.2r.6.1.2.d.2.1.f.48.g.1.3.2a.1.2y.3.i.1.1.1.1.e.o.1.3i.h.60.1.1.d.q.1.3h.i.62.c.q.1.3g.j.62.c.s.1.3e.i.64.9.t.4.3c.h.68.1.1.2.v.4.3c.d.7a.4.3d.d.7b.3.3d.d.6e.1.2.1.q.1.2.2.3e.a.6h.4.q.3.3h.a.6g.4.p.3.3i.9.6i.2.p.3.3j.8.78.5.3h.a.77.4.3j.9.77.5.3i.9.78.4.3k.9.av.a.at.a.au.9.av.9.aw.7.ax.6.az.6.9.2.an.6.az.5.ay.3.1.3.az.6.x.1.a2.4.iq"}}};
+const MAP_SIZES={};for(const k in WORLD.masks)MAP_SIZES[k]=[WORLD.masks[k].W,WORLD.masks[k].H];
 
 const REGIONS=[
  {key:'atl',name:'Atlantic Bloc',econ:1.45,sci:1.5,mil:1.25,pop:.8,grow:1,fp:{Loyalist:.5,Pragmatist:.35,Opportunist:.1,Isolationist:.05},
@@ -236,6 +236,9 @@ const FP_DESC={
  Isolationist:'May walk away and stand alone when the alliance cracks.'};
 const ALLY_NAMES=['Northern Compact','Iron Pact','Meridian Accord','Southern Covenant','Pacific Concord','Crescent League','Steppe Union','Tidewater Entente','Sunfire Coalition','Granite Axis','Azure Treaty','Ember Bloc'];
 const ALLY_COLORS=['#e05a47','#3f8efc','#e3c25e','#2fbf71','#9b6dff','#ff7eb6','#22c3c3','#ff9a3c','#a3d65c','#c98b6b','#7aa5d6','#d16ba5'];
+// Real cities: name|latitude|longitude|metro population (millions)
+const CITY_DATA="New York|40.71|-74.01|19;Los Angeles|34.05|-118.24|13;Chicago|41.88|-87.63|9.5;Houston|29.76|-95.37|7;Dallas|32.78|-96.8|7.6;Washington|38.9|-77.04|6.3;Miami|25.76|-80.19|6.1;Atlanta|33.75|-84.39|6;Philadelphia|39.95|-75.17|6.2;Boston|42.36|-71.06|4.9;Phoenix|33.45|-112.07|4.9;San Francisco|37.77|-122.42|4.7;Seattle|47.61|-122.33|4;Denver|39.74|-104.99|3;Minneapolis|44.98|-93.27|3.6;Detroit|42.33|-83.05|4.3;Toronto|43.65|-79.38|6.2;Montreal|45.5|-73.57|4.3;Vancouver|49.28|-123.12|2.6;Calgary|51.05|-114.07|1.5;Winnipeg|49.9|-97.14|0.8;Anchorage|61.22|-149.9|0.3;Mexico City|19.43|-99.13|21.8;Guadalajara|20.67|-103.35|5.3;Monterrey|25.69|-100.32|5.3;Havana|23.11|-82.37|2.1;Guatemala City|14.63|-90.51|3;Panama City|8.98|-79.52|1.9;Santo Domingo|18.49|-69.93|3.3;Halifax|44.65|-63.57|0.4;Nuuk|64.18|-51.72|0.02;Reykjavik|64.15|-21.94|0.2;Yellowknife|62.45|-114.37|0.02;Edmonton|53.55|-113.49|1.4;Salt Lake City|40.76|-111.89|1.2;New Orleans|29.95|-90.07|1.3;São Paulo|-23.55|-46.63|22;Rio de Janeiro|-22.91|-43.17|13.6;Buenos Aires|-34.6|-58.38|15.4;Lima|-12.05|-77.04|11;Bogotá|4.71|-74.07|11;Santiago|-33.45|-70.67|6.8;Caracas|10.48|-66.9|2.9;Belo Horizonte|-19.92|-43.94|6;Brasília|-15.79|-47.88|4.8;Salvador|-12.97|-38.5|4;Recife|-8.05|-34.88|4.1;Fortaleza|-3.73|-38.52|4;Manaus|-3.12|-60.02|2.3;Belém|-1.46|-48.5|2.5;Porto Alegre|-30.03|-51.23|4.2;Quito|-0.18|-78.47|2;Guayaquil|-2.17|-79.92|3;La Paz|-16.5|-68.15|1.9;Montevideo|-34.9|-56.16|1.8;Asunción|-25.26|-57.58|3.4;Medellín|6.24|-75.58|4;Córdoba|-31.42|-64.18|1.6;Punta Arenas|-53.16|-70.91|0.1;London|51.51|-0.13|9.5;Paris|48.86|2.35|11;Berlin|52.52|13.4|3.6;Madrid|40.42|-3.7|6.7;Barcelona|41.39|2.17|5.6;Rome|41.9|12.5|4.3;Milan|45.46|9.19|3.1;Lisbon|38.72|-9.14|2.9;Amsterdam|52.37|4.9|2.5;Brussels|50.85|4.35|2.1;Vienna|48.21|16.37|1.9;Warsaw|52.23|21.01|1.8;Prague|50.08|14.44|1.3;Budapest|47.5|19.04|1.8;Stockholm|59.33|18.07|1.6;Oslo|59.91|10.75|1.1;Copenhagen|55.68|12.57|1.3;Helsinki|60.17|24.94|1.3;Dublin|53.35|-6.26|1.3;Manchester|53.48|-2.24|2.8;Hamburg|53.55|9.99|1.8;Munich|48.14|11.58|1.5;Athens|37.98|23.73|3.2;Bucharest|44.43|26.1|1.8;Belgrade|44.79|20.45|1.4;Sofia|42.7|23.32|1.3;Kyiv|50.45|30.52|3;Minsk|53.9|27.56|2;Moscow|55.76|37.62|12.6;Saint Petersburg|59.93|30.34|5.4;Kazan|55.79|49.12|1.3;Novosibirsk|55.03|82.92|1.6;Yekaterinburg|56.84|60.6|1.5;Omsk|54.99|73.37|1.1;Krasnoyarsk|56.01|92.85|1.1;Irkutsk|52.29|104.3|0.6;Yakutsk|62.03|129.73|0.3;Vladivostok|43.12|131.89|0.6;Murmansk|68.97|33.08|0.3;Norilsk|69.35|88.2|0.2;Magadan|59.56|150.8|0.1;Volgograd|48.71|44.51|1;Lyon|45.76|4.84|2.3;Marseille|43.3|5.37|1.8;Glasgow|55.86|-4.25|1.7;Riga|56.95|24.11|0.6;Arkhangelsk|64.54|40.54|0.3;Khabarovsk|48.48|135.08|0.6;Petropavlovsk|53.02|158.65|0.2;Istanbul|41.01|28.98|15.6;Ankara|39.93|32.86|5.7;Tehran|35.69|51.39|9.4;Baghdad|33.31|44.36|7.5;Riyadh|24.71|46.68|7.7;Jeddah|21.49|39.19|4.7;Dubai|25.2|55.27|3.5;Doha|25.29|51.53|2.4;Kuwait City|29.38|47.99|3;Cairo|30.04|31.24|21.3;Alexandria|31.2|29.92|5.4;Tel Aviv|32.09|34.78|4.2;Amman|31.95|35.93|4.6;Damascus|33.51|36.29|2.5;Beirut|33.89|35.5|2.4;Sana'a|15.37|44.19|3.3;Muscat|23.59|58.41|1.6;Mashhad|36.3|59.6|3.3;Casablanca|33.57|-7.59|3.8;Algiers|36.75|3.06|2.8;Tunis|36.81|10.18|2.4;Tripoli|32.89|13.19|1.2;Khartoum|15.5|32.56|6;Baku|40.41|49.87|2.3;Tbilisi|41.72|44.79|1.1;Tamanrasset|22.79|5.52|0.1;Lagos|6.52|3.38|15.4;Kinshasa|-4.44|15.27|15.6;Johannesburg|-26.2|28.05|6.2;Cape Town|-33.92|18.42|4.8;Durban|-29.86|31.03|3.2;Nairobi|-1.29|36.82|5.1;Addis Ababa|9.03|38.74|5.2;Dar es Salaam|-6.79|39.21|7.4;Luanda|-8.84|13.23|9;Accra|5.6|-0.19|2.6;Abidjan|5.36|-4.01|5.6;Dakar|14.72|-17.47|3.3;Kano|12|8.52|4.2;Kampala|0.35|32.58|3.7;Mogadishu|2.05|45.32|2.6;Antananarivo|-18.88|47.51|3.7;Maputo|-25.97|32.57|1.1;Harare|-17.83|31.05|1.6;Lusaka|-15.39|28.32|3.1;Bamako|12.64|-8|2.8;Niamey|13.51|2.11|1.4;N'Djamena|12.13|15.06|1.5;Douala|4.05|9.77|3.9;Kigali|-1.94|30.06|1.2;Lubumbashi|-11.66|27.48|2.6;Windhoek|-22.56|17.08|0.4;Kisangani|0.52|25.19|1.3;Mumbai|19.08|72.88|21;Delhi|28.61|77.21|32;Kolkata|22.57|88.36|15;Bengaluru|12.97|77.59|13;Chennai|13.08|80.27|11.5;Hyderabad|17.39|78.49|10.5;Ahmedabad|23.02|72.57|8.5;Karachi|24.86|67.01|16.8;Lahore|31.55|74.34|13.5;Islamabad|33.68|73.05|1.2;Dhaka|23.81|90.41|23;Kathmandu|27.72|85.32|1.5;Colombo|6.93|79.86|0.8;Kabul|34.56|69.21|4.6;Tashkent|41.3|69.24|2.6;Almaty|43.24|76.89|2;Astana|51.17|71.45|1.3;Tokyo|35.68|139.69|37;Osaka|34.69|135.5|19;Sapporo|43.06|141.35|2;Fukuoka|33.59|130.4|2.6;Seoul|37.57|126.98|25;Busan|35.18|129.08|3.4;Pyongyang|39.04|125.76|3.1;Beijing|39.9|116.41|21.5;Shanghai|31.23|121.47|28;Guangzhou|23.13|113.26|18.7;Shenzhen|22.54|114.06|17.6;Chongqing|29.56|106.55|17;Chengdu|30.57|104.07|16;Wuhan|30.59|114.31|11;Xi'an|34.34|108.94|12.9;Tianjin|39.34|117.36|13.9;Harbin|45.8|126.53|10;Shenyang|41.81|123.43|9;Kunming|25.04|102.71|8.4;Urumqi|43.83|87.62|4;Lhasa|29.65|91.17|0.9;Hong Kong|22.32|114.17|7.5;Taipei|25.03|121.57|7;Ulaanbaatar|47.89|106.91|1.6;Lanzhou|36.06|103.83|4;Jakarta|-6.21|106.85|34;Surabaya|-7.25|112.75|3;Medan|3.6|98.67|2.4;Manila|14.6|120.98|14.4;Davao|7.19|125.46|1.8;Bangkok|13.76|100.5|17;Ho Chi Minh City|10.82|106.63|9;Hanoi|21.03|105.85|8;Kuala Lumpur|3.14|101.69|8.4;Singapore|1.35|103.82|5.9;Yangon|16.87|96.2|5.6;Phnom Penh|11.56|104.92|2.3;Makassar|-5.15|119.43|1.5;Port Moresby|-9.44|147.18|0.4;Sydney|-33.87|151.21|5.3;Melbourne|-37.81|144.96|5.1;Brisbane|-27.47|153.03|2.6;Perth|-31.95|115.86|2.1;Adelaide|-34.93|138.6|1.4;Darwin|-12.46|130.84|0.15;Alice Springs|-23.7|133.88|0.03;Auckland|-36.85|174.76|1.7;Christchurch|-43.53|172.64|0.4;Honolulu|21.31|-157.86|1;Suva|-18.14|178.44|0.2";
+const CITIES=CITY_DATA.split(';').map(r=>{const [n,la,lo,p]=r.split('|');return{name:n,lat:+la,lon:+lo,pop:+p}});
 const ST_A=['Oak','Cedar','Harbor','Mill','Station','Market','Church','Victory','Liberty','Canal','Ridge','Kings','Queens','Union','Bridge','Garden','Iron','Copper','Salt','Lantern','Foundry','Chapel','Orchard','Signal','Granite','Willow','Elm','Maple','Pine','River','Hill','Park','Castle','Forge','Tower','Dock','Ferry','Rail','Meadow','Frost','Sun','Moon','Glass','Baker','Weaver','Tannery','Academy','Harvest'];
 const ST_B=['Street','Avenue','Lane','Road','Boulevard','Way','Row','Terrace','Place','Drive','Court','Crescent','Alley','Parade'];
 const DI_A=['North','South','Old','New','Upper','Lower','East','West','Saint','Kings','Red','Stone','Long','Bright'];
@@ -286,13 +289,22 @@ function genWorld(settings,seed){
       for(const j of [x>0?c-1:-1,x<W-1?c+1:-1,c-W,c+W]){if(j>=0&&j<N&&land[j]&&comp[j]<0){comp[j]=id;st.push(j)}}}
     compSize.push(n)}
   const landCells=[];for(let i=0;i<N;i++)if(land[i]&&compSize[comp[i]]>=40)landCells.push(i);
-  // seeds
-  const nC=settings.countries;const seeds=[];
-  for(let c=0;c<nC;c++){let best=-1,bd=-1;
-    for(let t=0;t<30;t++){const i=landCells[(rng()*landCells.length)|0];let md=1e9;const x=i%W,y=(i/W)|0;
-      for(const s of seeds){const dx=s%W-x,dy=((s/W)|0)-y;const dd=dx*dx+dy*dy;if(dd<md)md=dd}
-      if(md>bd&&!seeds.includes(i)){bd=md;best=i}}
-    seeds.push(best);}
+  // real cities: project onto the grid, snapping coastal cities onto the nearest land square
+  const D=Math.PI/180,mil=f=>1.25*Math.log(Math.tan(Math.PI/4+.4*f*D));const yN=mil(WORLD.north),yS=mil(WORLD.south);
+  const cityAt=new Int16Array(N).fill(-1);const cities=[];
+  for(const ct of CITIES){let x=Math.floor((ct.lon+180)/360*W),y=Math.floor((yN-mil(ct.lat))/(yN-yS)*H);x=clamp(x,0,W-1);y=clamp(y,0,H-1);
+    let best=-1,bd=1e9;const R=Math.max(3,Math.round(W/60));
+    for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=W||yy>=H)continue;const j=yy*W+xx;if(!land[j]||cityAt[j]>=0)continue;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=j}}
+    if(best<0)continue;cityAt[best]=cities.length;cities.push({name:ct.name,pop:ct.pop,cell:best})}
+  // capitals: real cities, spread out across the world, favouring big ones
+  const nC=Math.min(settings.countries,cities.length);const seeds=[],capCity=[];
+  const cand=cities.map((c,k)=>k).filter(k=>compSize[comp[cities[k].cell]]>=12);
+  const cxy=k=>[cities[k].cell%W,(cities[k].cell/W)|0];
+  {const top=cand.slice().sort((a,b)=>cities[b].pop-cities[a].pop).slice(0,12);const f=top[(rng()*top.length)|0];seeds.push(cities[f].cell);capCity.push(f)}
+  while(seeds.length<nC){let best=-1,bs=-1;
+    for(const k of cand){if(capCity.includes(k))continue;const [x,y]=cxy(k);let md=1e9;for(const q of capCity){const [qx,qy]=cxy(q);md=Math.min(md,(qx-x)**2+(qy-y)**2)}
+      const sc=Math.sqrt(md)*Math.pow(cities[k].pop+.3,.45)*(.75+.5*rng());if(sc>bs){bs=sc;best=k}}
+    if(best<0)break;seeds.push(cities[best].cell);capCity.push(best)}
   // grow nations with jittered dijkstra
   const origin=new Int16Array(N).fill(-1);const dist=new Float64Array(N).fill(Infinity);
   const sizeF=seeds.map(()=>.7+rng()*.7);const heap=new Heap();
@@ -313,7 +325,7 @@ function genWorld(settings,seed){
     if(land[i]){if(nb.some(j=>j<0||j>=N||!land[j])){coast.push(i);isCoast[i]=1}}
     else if(nb.some(j=>j>=0&&j<N&&land[j]))coastWater[i]=1;}
   // static sea lanes: short hops between nearby coasts, plus lanes that connect every landmass
-  const seaOff=[];for(let dy=-5;dy<=5;dy++)for(let dx=-5;dx<=5;dx++){if(dx*dx+dy*dy<=25&&Math.abs(dx)+Math.abs(dy)>1)seaOff.push([dx,dy])}
+  const SR=Math.max(5,Math.round(W/36));const seaOff=[];for(let dy=-SR;dy<=SR;dy++)for(let dx=-SR;dx<=SR;dx++){if(dx*dx+dy*dy<=SR*SR&&Math.abs(dx)+Math.abs(dy)>1)seaOff.push([dx,dy])}
   const pairs=[];
   for(const i of coast){const x=i%W,y=(i/W)|0;for(const [dx,dy] of seaOff){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=W||yy>=H)continue;const j=yy*W+xx;if(j>i&&isCoast[j]&&origin[j]!==origin[i])pairs.push(i,j)}}
   const lc=new Int32Array(N).fill(-1);let nComp=0;const compCoast=[];
@@ -327,7 +339,7 @@ function genWorld(settings,seed){
   edges.sort((x,y)=>x.d-y.d);
   const par=Array.from({length:nComp},(_,i)=>i);const find=x=>par[x]===x?x:(par[x]=find(par[x]));
   for(const e of edges){const ra=find(e.a),rb=find(e.b);const mst=ra!==rb;if(mst)par[ra]=rb;
-    if(!mst&&e.d>15*15)continue;
+    if(!mst&&e.d>(SR*3)**2)continue;
     // the closest pair plus up to 3 more nearly-as-close pairs spread along the coast
     const lim=Math.sqrt(e.d)+3;const chosen=[[e.i,e.j]];
     for(const i of compCoast[e.a]){if(chosen.length>=4)break;const xi=i%W,yi=(i/W)|0;
@@ -337,12 +349,11 @@ function genWorld(settings,seed){
     for(const [i,j] of chosen)pairs.push(i,j)}
   const seaPairs=Int32Array.from(pairs);
   // regions: each nation belongs to the modern demographic bloc where its capital really is
-  const D=Math.PI/180,mil=f=>1.25*Math.log(Math.tan(Math.PI/4+.4*f*D));const yN=mil(WORLD.north),yS=mil(WORLD.south);
   const lonlat=i=>{const x=i%W,y=(i/W)|0;const my=yN-(y+.5)/H*(yN-yS);return[-180+(x+.5)/W*360,(2.5*Math.atan(Math.exp(.8*my))-.625*Math.PI)/D]};
   const regionAt=i=>{const [lo,la]=lonlat(i);
     if(lo<-25)return la>28||(lo>-75&&la>50)?'atl':'lat';
-    if(lo<60&&la>=12&&la<=42&&!(lo<26&&la>36))return'gul';
-    if(lo<60&&la<12)return'afr';
+    if(lo<60&&la<15&&!(lo>42&&la>11))return'afr';
+    if(lo<60&&la<=42&&!(lo<26&&la>36))return'gul';
     if(lo<28&&la>36)return'atl';
     if(lo<60)return'ste';
     if(lo<92&&la<36)return'sas';
@@ -353,18 +364,18 @@ function genWorld(settings,seed){
   const counts=new Array(nC).fill(0);for(let i=0;i<N;i++)if(origin[i]>=0)counts[origin[i]]++;
   const used=new Set();const countries=[];
   for(let c=0;c<nC;c++){const s=seeds[c];
-    const reg=REGIONS.find(r=>r.key===regionAt(s));let name;
+    const reg=REGIONS.find(r=>r.key===regionAt(s));let name;const capName=cities[capCity[c]].name;
     for(let t=0;t<40;t++){name=reg.a[(rng()*reg.a.length)|0]+reg.b[(rng()*reg.b.length)|0];if(!used.has(name))break}
     if(used.has(name))name+=' '+(c+1);used.add(name);
     const pop=counts[c]*reg.pop*(.7+.6*rng());
     const econ=pop*reg.econ*(.7+.7*rng());
-    countries.push({id:c,name,region:reg.key,capital:s,origCells:counts[c],cells:counts[c],
+    countries.push({id:c,name,capName,region:reg.key,capital:s,origCells:counts[c],cells:counts[c],
       pop:Math.round(pop*13000),econ,army:econ*reg.mil*(.8+.6*rng()),sci:1+reg.sci*(1.5+2.5*rng()),
       fp:pickW(reg.fp,rng()),alliance:-1,alive:true,order:-1,target:-1,cx:s%W,cy:(s/W)|0,income:0,loyal:0});
   }
   const mE=countries.reduce((a,c)=>a+c.econ,0)/nC;
   for(const c of countries){c.econ*=100/mE;c.army*=100/mE}
-  return {W,H,N,land,origin,coast,isCoast,coastWater,seaPairs,countries};
+  return {W,H,N,land,origin,coast,isCoast,coastWater,seaPairs,countries,cities,cityAt};
 }
 
 function strengthOf(c,means){return .4*c.army/means.a+.35*c.econ/means.e+.25*c.sci/means.s}
@@ -416,7 +427,7 @@ function newWorld(settings,seed){
   WD=genWorld(settings,seed);
   const countries=WD.countries.map(c=>({...c}));
   const alliances=assignAlliances(countries,settings.alliances,mulberry32(seed^0x9e3779b9),WD.W);
-  G={v:2,seed,settings,started:false,turn:0,elapsed:0,speed:1,running:false,over:null,countries,alliances,wars:{},truce:{},peaceAsk:{},
+  G={v:3,seed,settings,started:false,turn:0,elapsed:0,speed:1,running:false,over:null,countries,alliances,wars:{},truce:{},peaceAsk:{},
     playerAlliance:0,playerCountry:0,log:[],autoCommand:true,autopilot:false,autoPause:true,lastBetrayal:-99,
     owner:Int16Array.from(WD.origin),cap:new Int32Array(WD.N).fill(-99),sel:-1};
   mark=new Uint32Array(WD.N);
@@ -455,7 +466,7 @@ function updateCounts(){
   const cellVal=cs.map(c=>c.econ/Math.max(1,c.origCells));
   for(const c of cs)c.cells=0;
   for(let i=0;i<own.length;i++){const o=own[i];if(o<0)continue;const c=cs[o];c.cells++;sx[o]+=i%W;sy[o]+=(i/W)|0;
-    inc[o]+=cellVal[org[i]]*(org[i]===o?1:.7)}
+    let v=cellVal[org[i]]*(org[i]===o?1:.7);const ci=WD.cityAt[i];if(ci>=0)v*=4+WD.cities[ci].pop*.6*RES();inc[o]+=v}
   for(const c of cs){if(c.cells){c.cx=sx[c.id]/c.cells;c.cy=sy[c.id]/c.cells}c.income=inc[c.id]}
 }
 
@@ -561,6 +572,7 @@ function allocMap(c){const fr=fronts(c);const m=new Map();if(!fr.length)return m
   for(const l of others)m.set(l.d,(hasT?.4:1)*w(l)/tw);
   return m}
 // Armies mobilise for 3 months, then wars escalate: fronts move at ~27% speed in month 4, 100% by month 150, 200% from month 350.
+const RES=()=>Math.pow(WD.W/160,1.5); // more squares per nation at higher resolution, so fronts move proportionally more squares
 const escalation=()=>G.turn<=3?0:clamp(.25+G.turn/200,.25,2);
 function resolveCombat(){
   const cs=G.countries,M=MILD();const pa=G.playerAlliance;const hits={};const lb=.03*M.loss;
@@ -578,10 +590,11 @@ function resolveCombat(){
     const rA=atkA/defD,rD=atkD/defA;
     let W=null,L=null,r=0;
     if(rA>.9&&rA>=rD){W=A;L=D;r=rA}else if(rD>.9){W=D;L=A;r=rD}
-    if(W&&esc>0){const n=Math.max(1,Math.round(M.speed*1.3*esc*Math.min(2,r-.7)*Math.sqrt(l.border+6)*(sea?.6:1)*(.6+.8*rnd())));
+    if(W&&esc>0){const n=Math.max(1,Math.round(M.speed*1.3*esc*RES()*Math.min(2,r-.7)*Math.sqrt(l.border+6)*(sea?.6:1)*(.6+.8*rnd())));
       const tk=capture(W.id,L.id,n,sea);
       if(tk.length){(hits[L.id]=hits[L.id]||{})[W.id]=(hits[L.id][W.id]||0)+tk.length;
-        if(W.alliance===pa||L.alliance===pa)logCapture(W,L,tk,W.target!==L.id);}
+        if(W.alliance===pa||L.alliance===pa)logCapture(W,L,tk,W.target!==L.id);
+        for(const i of tk){const ci=WD.cityAt[i];if(ci>=0&&i!==L.capital){const ct=WD.cities[ci];if(W.alliance===pa||L.alliance===pa||ct.pop>=8)addLog(`${W.name} captured the city of ${ct.name} from ${L.name}.`,W.alliance===pa?'p big':L.alliance===pa?'bad big':'')}}}
       W.army-=W.army*(W===A?fa:fd)*lb*.6;L.army-=L.army*(L===A?fa:fd)*lb*clamp(r,.6,1.8);
     }else{A.army-=A.army*fa*lb*.5;D.army-=D.army*fd*lb*.5}
     A.army=Math.max(1,A.army);D.army=Math.max(1,D.army);
@@ -608,7 +621,7 @@ function annex(D,A,why){
   const own=G.owner;let n=0;for(let i=0;i<own.length;i++)if(own[i]===D.id){own[i]=A.id;G.cap[i]=G.turn;n++}
   A.army+=D.army*.25;D.army=0;D.alive=false;D.target=-1;D.order=-1;D.cells=0;
   const pa=G.playerAlliance;
-  addLog(n?`${D.name} ${why==='capital'?'lost its capital and ':''}surrendered to ${A.name}. ${n} streets change hands.`:`${D.name} was erased from the map by ${A.name}.`,A.alliance===pa?'p big':D.alliance===pa?'bad big':'big');
+  addLog(n?`${D.name} ${why==='capital'?`lost its capital ${D.capName} and `:''}surrendered to ${A.name}. ${n} streets change hands.`:`${D.name} was erased from the map by ${A.name}.`,A.alliance===pa?'p big':D.alliance===pa?'bad big':'big');
   if(D.id===G.playerCountry){
     const alt=members(pa).sort((x,y)=>y.cells-x.cells)[0];
     if(alt){G.playerCountry=alt.id;notify('Your homeland has fallen',`<p>${esc(D.name)} surrendered to ${esc(A.name)}. The government has fled to <b>${esc(alt.name)}</b>, and you still command the ${esc(G.alliances[pa].name)}.</p>`)}
@@ -753,6 +766,7 @@ function endGame(kind,winner){
 function streetName(i){const h=hash32((i*2654435761)^G.seed);
   if(h%7===0)return ordinal(1+(h>>>8)%60)+' '+ST_B[(h>>>4)%ST_B.length];
   return ST_A[(h>>>3)%ST_A.length]+' '+ST_B[(h>>>9)%ST_B.length]}
+function nearestCity(i){const W=WD.W,x=i%W,y=(i/W)|0;let best=null,bd=1e9;for(const ct of WD.cities){const dx=ct.cell%W-x,dy=((ct.cell/W)|0)-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=ct}}return{ct:best,d:Math.sqrt(bd)}}
 function districtName(i){const W=WD.W,x=i%W,y=(i/W)|0;const h=hash32(((x>>2)*7919+(y>>2)*104729)^G.seed);return DI_A[h%DI_A.length]+DI_B[(h>>>5)%DI_B.length]}
 function dateStr(t){return MONTHS[t%12]+' '+(START_YEAR+Math.floor(t/12))}
 function fmtClock(ms){const s=Math.max(0,Math.floor(ms/1000));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return(h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(ss).padStart(2,'0')}
@@ -787,7 +801,7 @@ function save(){
 }
 function load(){
   const raw=store.get();if(!raw)return false;
-  try{const o=JSON.parse(raw);if(o.v!==2)return false;
+  try{const o=JSON.parse(raw);if(o.v!==3)return false;
     WD=genWorld(o.settings,o.seed);
     G={...o,owner:rleDecode(o.owner,WD.N),cap:new Int32Array(WD.N).fill(-99),running:false,pendingPeace:null};
     mark=new Uint32Array(WD.N);computeLinks();updateCounts();return true;
@@ -851,10 +865,19 @@ function draw(){
       const ang=Math.atan2(ey-sy,ex-sx),hs=(mine||vsMe?8:5)*dpr;ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(ex,ey);
       ctx.lineTo(ex-hs*Math.cos(ang-.45),ey-hs*Math.sin(ang-.45));ctx.lineTo(ex-hs*Math.cos(ang+.45),ey-hs*Math.sin(ang+.45));ctx.fill();}
   }
-  // capitals
-  for(const c of cs){if(!c.alive)continue;const cx=c.capital%WD.W,cy=(c.capital/WD.W)|0;const [x,y]=P(cx,cy);
-    const s=Math.max(2.5*dpr,Math.min(cell*.7,6*dpr));ctx.fillStyle='#0a0f16';ctx.fillRect(x-s-1,y-s-1,2*s+2,2*s+2);ctx.fillStyle='#e9eef4';ctx.fillRect(x-s,y-s,2*s,2*s);
-    if(c.id===G.playerCountry){ctx.strokeStyle='#f2b33d';ctx.lineWidth=2*dpr;ctx.beginPath();ctx.arc(x,y,s+5*dpr,0,7);ctx.stroke()}}
+  // cities (real) and capitals
+  ctx.textAlign='center';ctx.textBaseline='top';
+  const capSet=new Set(cs.filter(c=>c.alive).map(c=>c.capital));
+  for(const ct of WD.cities){const cx=ct.cell%WD.W,cy=(ct.cell/WD.W)|0;const [x,y]=P(cx,cy);
+    if(x<-50||y<-50||x>cv.width+50||y>cv.height+50)continue;
+    const isCap=capSet.has(ct.cell);const big=ct.pop>=8;
+    if(isCap){const s=Math.max(2.5*dpr,Math.min(cell*.6,5*dpr));ctx.fillStyle='#0a0f16';ctx.fillRect(x-s-1,y-s-1,2*s+2,2*s+2);ctx.fillStyle='#e9eef4';ctx.fillRect(x-s,y-s,2*s,2*s);
+      if(G.owner[ct.cell]===G.playerCountry&&G.countries[G.playerCountry].capital===ct.cell){ctx.strokeStyle='#f2b33d';ctx.lineWidth=2*dpr;ctx.beginPath();ctx.arc(x,y,s+5*dpr,0,7);ctx.stroke()}}
+    else{const r=Math.max(1.6*dpr,Math.min(cell*.35,3.5*dpr));ctx.fillStyle='#0a0f16';ctx.beginPath();ctx.arc(x,y,r+1*dpr,0,7);ctx.fill();ctx.fillStyle=big?'#f4f7fa':'#c9d4de';ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}
+    const show=isCap?view.z>=1.8||k*S>=6:big?view.z>=2.6:view.z>=4.2;
+    if(show){const fs=Math.round((isCap?10.5:9.5)*dpr);ctx.font=`${isCap?600:500} ${fs}px "IBM Plex Sans",system-ui,sans-serif`;
+      ctx.lineWidth=3*dpr;ctx.strokeStyle='rgba(6,10,16,.85)';ctx.strokeText(ct.name,x,y+5*dpr);ctx.fillStyle=isCap?'#ffffff':'#d5dee7';ctx.fillText(ct.name,x,y+5*dpr)}}
+  ctx.textBaseline='middle';
   // labels
   ctx.textAlign='center';ctx.textBaseline='middle';
   for(const c of cs){if(!c.alive)continue;const fs=clamp(Math.sqrt(c.cells)*cell*.22,0,15*dpr);if(fs<8.5*dpr)continue;
@@ -894,7 +917,8 @@ $('#zIn').onclick=()=>{view.z*=1.4;clampView();needDraw=true};$('#zOut').onclick
 function hover(e){const i=cellAt(e.clientX,e.clientY);showTip(e,i)}
 function showTip(e,i){const tip=$('#tip');if(i<0||G.owner[i]<0){tip.hidden=true;return}
   const o=G.countries[G.owner[i]],og=G.countries[WD.origin[i]];const al=G.alliances[o.alliance];
-  tip.innerHTML=`<div class="st">${esc(streetName(i))}</div><div>${esc(districtName(i))} district, ${esc(og.name)}</div>`+
+  const ci=WD.cityAt[i],nc=nearestCity(i);const place=ci>=0?`<b>City of ${esc(WD.cities[ci].name)}</b> · ${WD.cities[ci].pop}M people`:nc.ct&&nc.d<=WD.W/24?`${esc(districtName(i))} district, ${nc.d<=1.5?'':'outskirts of '}${esc(nc.ct.name)}`:`${esc(districtName(i))} district`;
+  tip.innerHTML=`<div class="st">${esc(streetName(i))}</div><div>${place}</div><div class="muted">${esc(og.name)}</div>`+
    (o.id!==og.id?`<div style="color:var(--red)">Occupied by ${esc(o.name)}</div>`:'')+`<div class="muted"><span class="sw" style="background:${al.color}"></span> ${esc(al.name)}</div>`;
   const r=cv.parentElement.getBoundingClientRect();tip.hidden=false;
   let x=e.clientX-r.left+14,y=e.clientY-r.top+14;if(x+250>r.width)x=Math.max(4,x-270);if(y+90>r.height)y=Math.max(4,y-100);
@@ -1001,8 +1025,10 @@ function renderIntel(el){
     <p class="small"><span class="sw" style="background:${al.color}"></span> ${esc(al.name)} ${c.alliance===pa?'<span class="pill you">your alliance</span>':atWar(pa,c.alliance)?'<span class="pill war">at war</span>':'<span class="pill peace">at peace</span>'}</p></div>`;
   if(c.alive)h+=`<dl class="kv"><dt>Army</dt><dd>${fmt(c.army)}</dd><dt>Combat power</dt><dd>${fmt(pw(c))}</dd><dt>Economy</dt><dd>${fmt(c.econ)} (income ${(c.lastIncome||0).toFixed(1)}/mo)</dd>
     <dt>Science</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd><dt>Population</dt><dd>${(c.pop/1e6).toFixed(1)}M</dd>
-    <dt>Foreign policy</dt><dd>${c.fp}</dd><dt>Status</dt><dd>${esc(statusOf(c))}</dd></dl>
+    <dt>Capital</dt><dd>${esc(c.capName)}</dd><dt>Foreign policy</dt><dd>${c.fp}</dd><dt>Status</dt><dd>${esc(statusOf(c))}</dd></dl>
     <p class="muted small">${FP_DESC[c.fp]}</p>`;
+  const held=WD.cities.filter(ct=>G.owner[ct.cell]===c.id).sort((a,b)=>b.pop-a.pop);
+  if(c.alive)h+=`<h3>Cities held (${held.length})</h3><p class="small">${held.map(ct=>esc(ct.name)+(ct.cell===c.capital?' ★':'')).join(' · ')||'<span class="muted">None</span>'}</p>`;
   h+=`<h3>Street ledger</h3><dl class="kv"><dt>Home streets held</dt><dd>${home} / ${c.origCells}</dd><dt>Occupied streets</dt><dd>${occ}</dd></dl>`+
     (lostList?`<p class="small"><span class="muted">Lost to:</span> ${lostList}</p>`:'')+(heldList?`<p class="small"><span class="muted">Holds from:</span> ${heldList}</p>`:'');
   if(c.alive&&!G.over){
@@ -1066,6 +1092,7 @@ function renderGuide(el){
     <li><b>Goal:</b> your alliance must control ${G.settings.win}% of the world's streets before the ${G.settings.len}-minute clock runs out. When time runs out, the alliance with the most land wins.</li>
     <li><b>Budget:</b> set Military / Economy / Science in Command. Money comes from the streets you hold. Occupied streets pay 70%.</li>
     <li><b>Orders:</b> tap one of your nations, then an enemy (or tap an enemy and press <i>Send</i>). Several members hitting one target split its defence, so focused attacks win.</li>
+    <li><b>Cities:</b> every capital and city on the map is a real one. Cities are worth several times a normal street in income, and capitals hold out until their nation is half conquered.</li>
     <li><b>Streets:</b> every square on the map is a street block. Fronts take them one by one. Hover or tap any square to see its street name.</li>
     <li><b>Surrender:</b> a nation surrenders when its capital falls or it drops below ${Math.round(G.settings.cap*100)}% of its home streets. Its land goes to the conqueror.</li>
     <li><b>Betrayal:</b> any nation may backstab its alliance. The rest fracture by foreign policy (Loyalist, Pragmatist, Opportunist, Isolationist). You can betray too, in the World tab.</li>
@@ -1098,14 +1125,14 @@ function renderSetupInfo(){
   const pa=G.playerAlliance,me=G.countries[G.playerCountry],reg=REGIONS.find(r=>r.key===me.region);
   const cs=G.countries,n=cs.length;
   const means={a:cs.reduce((s,c)=>s+c.army,0)/n,e:cs.reduce((s,c)=>s+c.econ,0)/n,s:cs.reduce((s,c)=>s+c.sci,0)/n};
-  $('#youCard').innerHTML=`<div class="small muted">You are assigned</div><h2>${esc(me.name)}</h2><p class="small">${esc(reg.name)} · ${me.fp} · in the <span class="sw" style="background:${G.alliances[pa].color}"></span> <b>${esc(G.alliances[pa].name)}</b></p><p class="small muted">You will command the whole alliance. Every other alliance is run by the computer.</p>`;
+  $('#youCard').innerHTML=`<div class="small muted">You are assigned</div><h2>${esc(me.name)}</h2><p class="small">Capital ${esc(me.capName)} · ${esc(reg.name)} · ${me.fp} · in the <span class="sw" style="background:${G.alliances[pa].color}"></span> <b>${esc(G.alliances[pa].name)}</b></p><p class="small muted">You will command the whole alliance. Every other alliance is run by the computer.</p>`;
   $('#alliPreview').innerHTML=`<table><tr><th>Alliance</th><th style="text-align:right">Military</th><th style="text-align:right">Economy</th><th style="text-align:right">Science</th><th style="text-align:right">Total</th></tr>`+
     G.alliances.map(a=>{const m=cs.filter(c=>c.alliance===a.id);const mil=m.reduce((s,c)=>s+c.army,0)/means.a,eco=m.reduce((s,c)=>s+c.econ,0)/means.e,sci=m.reduce((s,c)=>s+c.sci,0)/means.s;
       const regs=[...new Set(m.map(c=>REGIONS.find(r=>r.key===c.region).name))];
       return`<tr><td><span class="sw" style="background:${a.color}"></span> <b>${esc(a.name)}</b>${a.id===pa?' <span class="pill you">you</span>':''}<div class="small muted">${m.length} nations · ${esc(regs.slice(0,3).join(', '))}${regs.length>3?'…':''}</div></td>
       <td class="n">${(mil*.4).toFixed(2)}</td><td class="n">${(eco*.35).toFixed(2)}</td><td class="n">${(sci*.25).toFixed(2)}</td><td class="n"><b>${(mil*.4+eco*.35+sci*.25).toFixed(2)}</b></td></tr>`}).join('')+
     `</table><p class="small muted">Strength index = 40% military + 35% economy + 25% science. Tap a nation on the map to inspect it.</p>`;
-  if(G.sel>=0&&G.sel!==G.playerCountry){const c=cs[G.sel];$('#youCard').innerHTML+=`<p class="small" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">Selected: <b>${esc(c.name)}</b> · ${esc(REGIONS.find(r=>r.key===c.region).name)} · ${c.fp} · army ${fmt(c.army)} · econ ${fmt(c.econ)} · sci ${c.sci.toFixed(1)}</p>`}
+  if(G.sel>=0&&G.sel!==G.playerCountry){const c=cs[G.sel];$('#youCard').innerHTML+=`<p class="small" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">Selected: <b>${esc(c.name)}</b> (capital ${esc(c.capName)}) · ${esc(REGIONS.find(r=>r.key===c.region).name)} · ${c.fp} · army ${fmt(c.army)} · econ ${fmt(c.econ)} · sci ${c.sci.toFixed(1)}</p>`}
   legend();needDraw=true;
 }
 ['#sMap','#sCountries','#sAlliances'].forEach(s=>$(s).onchange=generate);
