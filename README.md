@@ -15,6 +15,7 @@ A browser strategy war game in one file (`index.html`). There's nothing to insta
 - **Equal alliances.** Nations are grouped into 2–6 regional alliances. Every alliance starts with exactly the same strength index (40% military, 35% economy, 25% science). Battlefield power is also equalized, so no alliance starts ahead.
 - **You get one nation in one alliance** and command that whole alliance. The computer runs every other alliance. It sets budgets, gangs up on weak targets, declares war when it has the edge and offers peace when it's losing.
 - **Your nation's economy:** pick Mixed, Free market, State-planned, War economy, Knowledge economy or Resource exporter at setup, and switch in the Command tab (once every 6 months). It stacks on top of the world economic policy.
+- **Weapons program:** a Convert slider in Command spends up to 4% of your stored science each month to raise troops immediately. You trade future technology (combat multiplier and income bonus) for soldiers now, so science, economy and military all have to be balanced. Computer alliances use it when they are losing.
 - **World settings you choose:**
   - **Economy:** Free-trade, Mixed, Protectionism or War economy.
   - **Military doctrine:** Blitzkrieg, Conventional, Fortress or High-tech.
