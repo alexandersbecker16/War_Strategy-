@@ -582,13 +582,17 @@ function aiPolicy(a){
   const mem=members(a.id);let mine=0,enemy=0,war=false;
   for(const c of mem){mine+=pw(c);for(const l of adj[c.id]){const d=G.countries[l.d];if(d.alive&&atWar(a.id,d.alliance)){war=true;enemy+=pw(d)/2}}}
   let p;
-  const state=!war?'peace':enemy>mine*1.1?'losing':'war';
+  let state=!war?'peace':enemy>mine*1.1?'losing':'war';
+  // at peace next to a stronger alliance whose truce is ending: mobilise early instead of being caught out
+  if(!war&&G.turn>=FPD().startWar-3&&G.alliances.some(b=>b.alive&&b.id!==a.id&&alliancePower(b.id)>mine*1.2&&(G.truce[wkey(a.id,b.id)]||0)<=G.turn+3&&allianceLinked(a.id,b.id)))state='war';
   p=state==='peace'?{mil:30,eco:40,sci:30}:state==='losing'?{mil:60,eco:20,sci:20}:{mil:45,eco:25,sci:30};
   if(G.settings.mil==='tech'){p.sci+=10;p.eco-=10}
   for(const c of mem){c.policy=smartSplit(c,state);if(G.settings.mil==='tech'){c.policy.sci+=8;c.policy.mil-=8}}
-  // AI cashes in science for troops when it is losing a war, and saves it otherwise
-  p.conv=war&&enemy>mine*1.25?60:war&&enemy>mine*.9?25:0;
+  // At war the computer cashes science into troops (tested: this wins about 4 games in 5 against saving it),
+  // flat out unless it is clearly winning, and members on a front that is about to break convert at once.
+  p.conv=!war?0:enemy>mine*.8?100:60;
   a.policy=p;
+  if(war)for(const c of mem)if(threatOn(c)>1.2)convertNow(c);
 }
 
 function defMult(d){return MILD().def*(d.target<0?1.1:1)}
@@ -610,14 +614,29 @@ function chooseTargets(){
 function frontOdds(c,d,l){const nf=fronts(c).length;const mine=pw(c)*(nf>1?.6:1)*(l.border?1:.8);
   const am=allocMap(d);const theirs=am.has(c.id)?am.get(c.id):1/Math.max(1,fronts(d).length);
   return mine/Math.max(1,pw(d)*theirs*(d.target===c.id?1:defMult(d)))}
+// enemy pressure on a nation: enemy power on its borders compared with its own (above 1 = in danger)
+function threatOn(c){let t=0;for(const l of adj[c.id]){const d=G.countries[l.d];if(!d.alive||!atWar(c.alliance,d.alliance))continue;
+  t+=pw(d)*(d.target===c.id?1:.35)/Math.max(1,fronts(d).length)}return t/Math.max(1,pw(c))}
+// Computer target choice. It weighs the real odds, piles onto targets allies are already hitting, finishes off
+// nations close to surrender, goes for capitals within reach and strikes back at whoever is attacking it.
+// With no good attack it holds and defends (+10%).
 function aiPickTarget(c,planned){
-  let best=-1,bs=0;
-  for(const l of adj[c.id]){const d=G.countries[l.d];if(!d.alive||!atWar(c.alliance,d.alliance))continue;
-    const r=frontOdds(c,d,l);if(r<.85)continue;
-    const sc=Math.min(r,3)*(d.cells<d.origCells*.6?1.3:1)*(1+.25*Math.min(3,planned[d.id]))*Math.sqrt(l.border+4);
+  let best=-1,bs=0;const cs=G.countries,cap=G.settings.cap;
+  for(const l of adj[c.id]){const d=cs[l.d];if(!d.alive||!atWar(c.alliance,d.alliance))continue;
+    let r=frontOdds(c,d,l);
+    if(d.target===c.id)r*=1.15;                                               // hitting your attacker uses your full force against it
+    if(r<.85)continue;
+    const gang=Math.min(3,planned[d.id]);
+    const left=d.cells/Math.max(1,d.origCells);
+    const finish=left<cap+.12?2:left<.6?1.4:1;                                // close to surrender: finish it
+    const capNear=capitalExposed(c,d)?1.35:1;                                 // its capital is within reach: take it and it surrenders
+    const sc=Math.min(r,3)*finish*capNear*(1+.25*gang)*(d.target===c.id?1.2:1)*Math.sqrt(l.border+4);
     if(sc>bs){bs=sc;best=d.id}}
   return best;
 }
+// is the enemy capital on (or next to) the street front with c?
+function capitalExposed(c,d){const i=d.capital,W=WD.W,own=G.owner;if(own[i]!==d.id)return false;const x=i%W;
+  for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){const xx=x+dx,j=i+dy*W+dx;if(xx<0||xx>=W||j<0||j>=own.length)continue;if(own[j]===c.id)return true}return false}
 function capture(A,D,n,sea){
   const own=G.owner,W=WD.W,N=WD.N;const fr=[];stamp++;if(stamp>4e9){mark.fill(0);stamp=1}
   if(!sea){for(let i=0;i<N;i++){if(own[i]!==D)continue;const x=i%W;
@@ -716,6 +735,13 @@ function diplomacy(){
   const forceWar=al.length<=2;
   // endgame: once one alliance holds 75% of the world, everyone left is at war with it
   for(const a of al)if(shareOf(a.id)>=75)for(const b of al)if(b.id!==a.id&&!atWar(a.id,b.id)&&isAI(a.id))declareWar(a.id,b.id);
+  // balance of power: computer alliances gang up on any alliance that gets past 40% of the world
+  for(const a of al){if(shareOf(a.id)<40)continue;for(const b of al)if(b.id!==a.id&&isAI(b.id)&&!atWar(a.id,b.id)&&(G.truce[wkey(a.id,b.id)]||0)<=G.turn&&allianceLinked(a.id,b.id)&&rnd()<.25)declareWar(b.id,a.id)}
+  // avoid losing two-front wars: a computer alliance fighting several wars makes peace on its quietest front
+  for(const a of al){if(!isAI(a.id)||warsOf(a.id)<2)continue;let tot=0,qk=null,qa=1e9;
+    for(const k in G.wars){const [p,q]=k.split('|').map(Number);if(p!==a.id&&q!==a.id)continue;const o=p===a.id?q:p;const po=alliancePower(o);tot+=po;
+      if(G.turn-G.wars[k].since>=10&&isAI(o)&&po<qa){qa=po;qk=[a.id,o]}}
+    if(qk&&tot>alliancePower(a.id)*1.2&&rnd()<.08)makePeace(qk[0],qk[1])}
   for(let i=0;i<al.length;i++)for(let j=i+1;j<al.length;j++){
     const a=al[i],b=al[j],k=wkey(a.id,b.id);
     const pa=Math.max(1,alliancePower(a.id)),pb=Math.max(1,alliancePower(b.id));
@@ -724,7 +750,12 @@ function diplomacy(){
       if(G.turn<F.startWar||(G.truce[k]||0)>G.turn)continue;
       if(!allianceLinked(a.id,b.id))continue;
       const thr=G.settings.fp==='real'?1.1-G.turn*.003:1.3-G.turn*.004;
-      if(isAI(s.id)&&(ratio>thr||forceWar)&&rnd()<.5)declareWar(s.id,w.id);
+      // a target already fighting other wars is weaker than it looks; an attacker tied down elsewhere is careful
+      const eff=(x,y)=>Math.max(1,alliancePower(x))/(1+.6*warsOf(x))/Math.max(1,alliancePower(y));
+      const busy=x=>{let worst=0;for(const k in G.wars){const [p,q]=k.split('|').map(Number);if(p!==x&&q!==x)continue;const o=p===x?q:p;worst=Math.max(worst,alliancePower(o)/Math.max(1,alliancePower(x)))}return worst};
+      const sOK=isAI(s.id)&&(busy(s.id)<.8||ratio>2.2);
+      if(sOK&&(1/eff(w.id,s.id)>thr||forceWar)&&rnd()<.5)declareWar(s.id,w.id);
+      else if(isAI(w.id)&&busy(w.id)<.5&&eff(s.id,w.id)<1/Math.max(.6,thr)&&warsOf(s.id)>0&&rnd()<.35)declareWar(w.id,s.id); // pile onto a giant that is already at war
       else if(isAI(w.id)&&isAI(s.id)&&thr<.85&&rnd()<.3)declareWar(w.id,s.id);
     }else if(!forceWar){
       const age=G.turn-G.wars[k].since;if(age<12)continue;
@@ -767,6 +798,7 @@ function createAlliance(founder,kind){
 }
 function betrayals(){
   const F=FPD();if(G.turn<18)return;
+  allyWars();
   if(G.turn-G.lastBetrayal<(G.settings.fp==='anarchy'?4:12))return;
   const alive=G.alliances.filter(a=>a.alive);if(alive.length<2)return;
   const avgP=alive.reduce((s,a)=>s+alliancePower(a.id),0)/alive.length;
@@ -779,6 +811,22 @@ function betrayals(){
     if(rnd()<p){doBetray(c);return}
   }
 }
+// Computer nations can turn their guns on their own allies: a strong nation next to a much weaker ally may
+// declare war on it to grab its land. More likely for Opportunists, in Anarchy, and once the alliance has no
+// outside enemies left nearby. Your home nation never does this on its own, but your other members can.
+function allyWars(){
+  const F=FPD();if(G.turn-(G.lastAllyWar||-99)<(G.settings.fp==='anarchy'?5:10))return;const cs=G.countries;
+  for(const c of shuffle(cs.filter(c=>c.alive))){
+    if(c.id===G.playerCountry||members(c.alliance).length<3||c.fp==='Loyalist')continue;
+    let tgt=null,bv=0;
+    for(const l of adj[c.id]){const d=cs[l.d];if(!d.alive||d.alliance!==c.alliance||d.id===G.playerCountry||!l.border)continue;
+      const r=pw(c)/Math.max(1,pw(d));if(r>2.2&&r*l.border>bv){bv=r*l.border;tgt=d}}
+    if(!tgt)continue;
+    const quiet=!fronts(c).length;
+    let p=.0025*FPM[c.fp]*F.betray*(quiet?3:.6)*(shareOf(c.alliance)>45?2:1);
+    if(rnd()<p){G.lastAllyWar=G.turn;doBetray(c,'new',false,tgt);c.target=tgt.id;return}
+  }
+}
 // Declare war on a nation inside your own alliance: it is expelled, forms its own bloc at war with you,
 // and the other members pick sides by their foreign policy (the same fracture rules as a betrayal).
 function warOnAlly(c){
@@ -786,7 +834,7 @@ function warOnAlly(c){
   notify(`Declare war on ${c.name}?`,`<p><b>${esc(c.name)}</b> is your ally. Declaring war throws it out of the ${esc(G.alliances[G.playerAlliance].name)} and the two of you go to war at once.</p><p class="small muted">Your other members choose sides by foreign policy: Loyalists stay with you, Pragmatists back the stronger side, Opportunists may join ${esc(c.name)}, Isolationists may go neutral.</p>`,
     [{label:'Cancel',fn:()=>{}},{label:'Declare war',cls:'danger',fn:()=>{doBetray(c,'new',true);G.sel=c.id;G.dirty=true;save();refreshUI()}}]);
 }
-function doBetray(T,dest,expel){
+function doBetray(T,dest,expel,victim){
   const X=T.alliance,Xn=G.alliances[X].name,cs=G.countries;const playerIsTraitor=T.id===G.playerCountry;
   let Y;
   if(dest===undefined){
@@ -798,11 +846,12 @@ function doBetray(T,dest,expel){
   T.alliance=Y;T.order=-1;T.target=-1;
   if(playerIsTraitor){G.playerAlliance=Y;G.alliances[Y].policy={...G.alliances[X].policy}}
   const pX=alliancePower(X),pY=alliancePower(Y);
-  const lines=[expel?`<li>You declared war on <b>${esc(T.name)}</b> (${T.fp}). It was thrown out of the ${esc(Xn)} and formed the ${esc(G.alliances[Y].name)}.</li>`:`<li><b>${esc(T.name)}</b> (${T.fp}) ${formed?`broke away and founded the ${esc(G.alliances[Y].name)}`:`defected to the ${esc(G.alliances[Y].name)}`}.</li>`];
+  const lines=[expel?`<li>You declared war on <b>${esc(T.name)}</b> (${T.fp}). It was thrown out of the ${esc(Xn)} and formed the ${esc(G.alliances[Y].name)}.</li>`:victim?`<li><b>${esc(T.name)}</b> (${T.fp}) declared war on its own ally <b>${esc(victim.name)}</b> and founded the ${esc(G.alliances[Y].name)}.</li>`:`<li><b>${esc(T.name)}</b> (${T.fp}) ${formed?`broke away and founded the ${esc(G.alliances[Y].name)}`:`defected to the ${esc(G.alliances[Y].name)}`}.</li>`];
   const indep=[];
   for(const M of members(X)){
     let res='stay';
     if(M.id===G.playerCountry)res='stay';
+    else if(victim&&M.id===victim.id)res='stay';
     else if(M.fp==='Pragmatist')res=(pY>pX&&rnd()<.6)?'follow':'stay';
     else if(M.fp==='Opportunist')res=rnd()<(pY>pX*.8?.6:.3)?'follow':'stay';
     else if(M.fp==='Isolationist')res=rnd()<.35?'indep':'stay';
@@ -817,10 +866,10 @@ function doBetray(T,dest,expel){
   if(!members(X).length)G.alliances[X].alive=false;
   G.lastBetrayal=G.turn;
   const involved=playerIsTraitor||X===G.playerAlliance||Y===G.playerAlliance;
-  addLog(expel?`You declared war on your own ally ${T.name}! The ${Xn} fractured.`:`${T.name} betrayed the ${Xn}! The alliance fractured.`,involved?'bad big':'big');
+  addLog(expel?`You declared war on your own ally ${T.name}! The ${Xn} fractured.`:victim?`${T.name} declared war on its own ally ${victim.name}! The ${Xn} fractured.`:`${T.name} betrayed the ${Xn}! The alliance fractured.`,involved?'bad big':'big');
   {
-    notify(expel?`War on ${T.name}`:playerIsTraitor?'You broke the alliance':`Betrayal: ${T.name}`,
-      `<p>${expel?`You turned on your ally ${esc(T.name)}.`:playerIsTraitor?`Your nation left the ${esc(Xn)}.`:`${esc(T.name)} stabbed the ${esc(Xn)} in the back.`} Each member then chose a side according to its foreign policy:</p><ul>${lines.join('')}</ul>`,null,!involved);
+    notify(expel?`War on ${T.name}`:playerIsTraitor?'You broke the alliance':victim?`${T.name} attacks its ally`:`Betrayal: ${T.name}`,
+      `<p>${expel?`You turned on your ally ${esc(T.name)}.`:playerIsTraitor?`Your nation left the ${esc(Xn)}.`:victim?`${esc(T.name)} declared war on its own ally ${esc(victim.name)}.`:`${esc(T.name)} stabbed the ${esc(Xn)} in the back.`} Each member then chose a side according to its foreign policy:</p><ul>${lines.join('')}</ul>`,null,!involved);
   }
   computeLinks();
 }
@@ -1302,6 +1351,7 @@ function renderGuide(el){
   <ol class="small">
     <li><b>Goal:</b> your alliance must control ${G.settings.win}% of the world's streets before the ${G.settings.len}-minute clock runs out. When time runs out, the alliance with the most land wins.</li>
     <li><b>Budget balance:</b> military money buys troops, science makes every troop stronger, economy grows the income that pays for both. The best mix depends on the nation: poor, populous nations get the most soldiers per dollar, while rich nations research fastest because research has a fixed price. Leave <i>tailor each nation's budget</i> on and each member uses its best mix. The Intel tab ranks every nation by wealth.</li>
+    <li><b>Allies can turn on each other:</b> any nation can declare war on anyone, even its own ally. Computer nations sometimes attack a much weaker ally next door, especially Opportunists and alliances with no outside enemies left. The alliance then fractures by foreign policy.</li>
     <li><b>Weapons program:</b> the Convert slider spends up to 4% of your stored science each month to raise troops at once. <i>Convert now</i> (in Command for every member, or in Intel for one nation) spends 15% at once, once a month. You get more soldiers now, but every troop is weaker afterwards. Balance it against the Military, Economy and Science budget.</li>
     <li><b>Budget:</b> set Military / Economy / Science in Command (they always add up to 100%), or give one nation its own budget in Intel. Money comes from the streets you hold. Occupied streets pay 70%.</li>
     <li><b>Click any nation</b> to see its name, alliance and capital, and to declare war, offer peace or launch an attack from that card. You can even declare war on one of your own allies: it gets expelled and your alliance fractures by foreign policy.</li>
