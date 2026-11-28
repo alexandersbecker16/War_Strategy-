@@ -317,7 +317,7 @@ function genWorld(settings,seed){
     for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=W||yy>=H)continue;const j=yy*W+xx;if(!land[j]||cityAt[j]>=0)continue;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=j}}
     if(best<0)continue;cityAt[best]=cities.length;cities.push({name:ct.name,pop:ct.pop,cell:best})}
   // capitals: real cities, spread out across the world, favouring big ones
-  const nC=Math.min(settings.countries,cities.length);const seeds=[],capCity=[];
+  const nC=Math.min(settings.nations||settings.countries,cities.length);const seeds=[],capCity=[];
   const cand=cities.map((c,k)=>k).filter(k=>compSize[comp[cities[k].cell]]>=12);
   const cxy=k=>[cities[k].cell%W,(cities[k].cell/W)|0];
   {const top=cand.slice().sort((a,b)=>cities[b].pop-cities[a].pop).slice(0,12);const f=top[(rng()*top.length)|0];seeds.push(cities[f].cell);capCity.push(f)}
@@ -413,24 +413,26 @@ function assignAlliances(countries,nA,rng,W){
   while(seeds.length<nA){let best=-1,bd=-1;for(let i=0;i<n;i++){if(seeds.includes(i))continue;const md=Math.min(...seeds.map(s=>d2(i,s)));if(md>bd){bd=md;best=i}}seeds.push(best)}
   const tot=new Array(nA).fill(0);const mem=Array.from({length:nA},()=>[]);
   seeds.forEach((s,a)=>{al[s]=a;tot[a]+=st[s];mem[a].push(s)});
-  let left=n-nA;
-  while(left>0){let a=0;for(let k=1;k<nA;k++)if(tot[k]<tot[a])a=k;
+  let left=n-nA;const capN=Math.ceil(n/nA);   // every alliance gets the same number of nations
+  while(left>0){let a=-1;for(let k=0;k<nA;k++)if(mem[k].length<capN&&(a<0||tot[k]<tot[a]))a=k;
     let best=-1,bd=1e18;for(let i=0;i<n;i++){if(al[i]>=0)continue;const md=Math.min(...mem[a].map(m=>d2(i,m)));if(md<bd){bd=md;best=i}}
     al[best]=a;tot[a]+=st[best];mem[a].push(best);left--}
-  // refine toward equal totals
-  for(let it=0;it<1500;it++){let hi=0,lo=0;for(let k=1;k<nA;k++){if(tot[k]>tot[hi])hi=k;if(tot[k]<tot[lo])lo=k}
+  // refine toward equal totals (moving a nation would break equal member counts, so only when counts can't be equal)
+  for(let it=0;it<(n%nA?1500:0);it++){let hi=0,lo=0;for(let k=1;k<nA;k++){if(tot[k]>tot[hi])hi=k;if(tot[k]<tot[lo])lo=k}
     const gap=tot[hi]-tot[lo];if(gap<.005*tot[hi])break;
-    let best=-1,bs=1e18;for(const i of mem[hi]){if(mem[hi].length<2)break;if(st[i]>=gap)continue;
+    let best=-1,bs=1e18;for(const i of mem[hi]){if(mem[hi].length<=mem[lo].length)break;if(st[i]>=gap)continue;
       const md=Math.sqrt(Math.min(...mem[lo].map(m=>d2(i,m))));const sc=Math.abs(st[i]-gap/2)+.004*md;if(sc<bs){bs=sc;best=i}}
     if(best<0)break;mem[hi].splice(mem[hi].indexOf(best),1);mem[lo].push(best);al[best]=lo;tot[hi]-=st[best];tot[lo]+=st[best];}
   // swap pass: trade one nation each way between the largest and smallest alliance when that narrows the gap
+  // first between nearby nations only; if land is still more than 25% apart, between any two nations
+  for(const R of [W/2,1e9]){if(R>W&&Math.max(...tot)<=1.25*Math.min(...tot))break;
   for(let it=0;it<300;it++){let hi=0,lo=0;for(let k=1;k<nA;k++){if(tot[k]>tot[hi])hi=k;if(tot[k]<tot[lo])lo=k}
     const gap=tot[hi]-tot[lo];let best=null,bg=gap;
-    const near=(i,grp,skip)=>Math.sqrt(Math.min(...grp.filter(m=>m!==skip).map(m=>d2(i,m))));const R=W/4;
+    const near=(i,grp,skip)=>Math.sqrt(Math.min(...grp.filter(m=>m!==skip).map(m=>d2(i,m))));
     for(const i of mem[hi])for(const j of mem[lo]){const d=st[i]-st[j];if(d<=0)continue;const ng=Math.abs(gap-2*d);
       if(ng<bg-1e-9&&near(i,mem[lo],j)<R&&near(j,mem[hi],i)<R){bg=ng;best=[i,j,d]}}
     if(!best||bg>=gap*.98)break;const [i,j,d]=best;
-    mem[hi].splice(mem[hi].indexOf(i),1);mem[lo].splice(mem[lo].indexOf(j),1);mem[hi].push(j);mem[lo].push(i);al[i]=lo;al[j]=hi;tot[hi]-=d;tot[lo]+=d}
+    mem[hi].splice(mem[hi].indexOf(i),1);mem[lo].splice(mem[lo].indexOf(j),1);mem[hi].push(j);mem[lo].push(i);al[i]=lo;al[j]=hi;tot[hi]-=d;tot[lo]+=d}}
   for(let i=0;i<n;i++)countries[i].alliance=al[i];
   // exact equalisation: scale each alliance's members so every alliance total is identical
   const tot2=new Array(nA).fill(0);for(let i=0;i<n;i++)tot2[al[i]]+=strengthOf(countries[i],means);for(let a=0;a<nA;a++)tot[a]=tot2[a];
@@ -457,6 +459,8 @@ function readSettings(){return{mapSize:$('#sMap').value,countries:+$('#sCountrie
   econ:$('#sEcon').value,mil:$('#sMil').value,fp:$('#sFp').value,len:+$('#sLen').value,win:+$('#sWin').value,cap:+$('#sCap').value,clock:$('#sClock').value}}
 
 function newWorld(settings,seed){
+  // round the number of nations to a multiple of the alliance count, so every alliance gets the same number
+  settings.nations=Math.max(settings.alliances*2,Math.round(settings.countries/settings.alliances)*settings.alliances);
   WD=genWorld(settings,seed);
   const countries=WD.countries.map(c=>({...c}));
   const alliances=assignAlliances(countries,settings.alliances,mulberry32(seed^0x9e3779b9),WD.W);
@@ -468,12 +472,17 @@ function newWorld(settings,seed){
   computeLinks();updateCounts();
   equalizeStart();
 }
-// Every alliance starts with exactly the same real income (cities, trade bonus and all), the same average
-// science and the same combat power. Nations inside an alliance still differ (rich and poor, big and small),
-// so how you use them is what decides the war.
+// Every nation starts with exactly the same population, real income (cities included), science and combat
+// power, and every alliance has the same number of nations, so alliances are equal too. Nations still differ in
+// land, region (growth rate), foreign policy and position on the map, so strategy decides the war.
 function equalizeStart(){
   const E=ECOND(),al=G.alliances,cs=G.countries,nA=al.length;
+  {const mPop=cs.reduce((t,c)=>t+c.pop,0)/cs.length,mSci=cs.reduce((t,c)=>t+c.sci,0)/cs.length;for(const c of cs){c.pop=mPop;c.sci=mSci}
+   updateCounts();const mInc=cs.reduce((t,c)=>t+c.income,0)/cs.length;for(const c of cs)c.econ*=mInc/Math.max(1e-9,c.income);updateCounts();
+   const mPw=cs.reduce((t,c)=>t+pw(c),0)/cs.length;for(const c of cs)c.army*=mPw/Math.max(1e-9,pw(c))}
+  // alliance pass: only needed when the nations can't split evenly (it then evens out the alliances instead)
   const mem=al.map(a=>cs.filter(c=>c.alliance===a.id));
+  if(mem.every(m=>m.length===mem[0].length))return;
   const incOf=m=>m.reduce((t,c)=>t+c.income*.1*E.income*NE(c).income,0)*(1+E.trade*Math.min(1,(m.length-1)/4));
   const avg=f=>mem.reduce((t,m)=>t+f(m),0)/nA;
   const sciAvg=m=>m.reduce((t,c)=>t+c.sci,0)/m.length,tS=avg(sciAvg);
@@ -1430,7 +1439,7 @@ function renderSetupInfo(){
       const regs=[...new Set(m.map(c=>REGIONS.find(r=>r.key===c.region).name))];
       return`<tr><td><span class="sw" style="background:${allyColor(a)}"></span> <b>${esc(a.name)}</b>${a.id===pa?' <span class="pill you">you</span>':''}<div class="small muted">${m.length} nations · ${esc(regs.slice(0,3).join(', '))}${regs.length>3?'…':''}</div></td>
       <td class="n">${(m.reduce((t,c)=>t+c.cells,0)/tot*100).toFixed(1)}%</td><td class="n">${inc.toFixed(1)}</td><td class="n">${fmt(m.reduce((t,c)=>t+pw(c),0))}</td><td class="n">${(m.reduce((t,c)=>t+c.sci,0)/m.length).toFixed(2)}</td></tr>`}).join('')+
-    `</table><p class="small muted">Every alliance starts with the same income (per month), combat power and average science, and close to the same land. Its nations still differ, so strategy decides the war. Tap a nation on the map to inspect it.</p>`}
+    `</table><p class="small muted">Every nation starts with the same population, income, combat power and science, and every alliance has ${cs.length/G.alliances.length===Math.floor(cs.length/G.alliances.length)?'the same number of nations ('+cs.length/G.alliances.length+' each'+(G.settings.nations!==G.settings.countries?`; ${cs.length} nations in all, rounded from ${G.settings.countries} so they split evenly`:'')+')':'nearly the same number of nations'}. Nations differ only in land, region and foreign policy, so strategy decides the war. Tap a nation on the map to inspect it.</p>`}
   if(G.sel>=0&&G.sel!==G.playerCountry){const c=cs[G.sel];$('#youCard').innerHTML+=`<p class="small" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">Selected: <b>${esc(c.name)}</b> (capital ${esc(c.capName)}) · ${esc(REGIONS.find(r=>r.key===c.region).name)} · ${c.fp} · army ${fmt(c.army)} · econ ${fmt(c.econ)} · sci ${c.sci.toFixed(1)}</p>`}
   legend();needDraw=true;
 }
