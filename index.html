@@ -488,10 +488,10 @@ function polOf(c){const a=G.alliances[c.alliance];
 // weapons program: troops raised per point of science (richer economies build more per point)
 function convRate(c,avgInc){const E=ECOND(),X=NE(c);const inc=c.lastIncome||c.income*.1;
   return 45*clamp(inc/Math.max(.01,avgInc||G.avgInc||1),.3,3)*E.milConv*X.milConv}
-const SCI_FLOOR=1.5,CONV_NOW=.15;   // science can't drop below the floor; "Convert now" spends 15% of the stock once a month
+const SCI_FLOOR=1.5,CONV_NOW=.15;   // science can't drop below the floor; an emergency conversion spends 15% of the stock, once a month
 const convNowAmt=c=>Math.max(0,Math.min(c.sci-SCI_FLOOR,c.sci*CONV_NOW));
 function convertNow(c){if(!c.alive||c.convTurn===G.turn)return 0;const d=convNowAmt(c);if(d<=.001)return 0;
-  const gain=d*convRate(c);c.sci-=d;c.army+=gain;c.convTurn=G.turn;return gain}
+  const gain=d*convRate(c);c.sci-=d;c.army+=gain;c.convTurn=G.turn;c.burst=gain;return gain}
 // total wealth: a year of output plus the capital stock of the home economy
 const totalWealth=c=>(c.lastIncome||c.income*.1)*12+c.econ*.5;
 function fmtMoney(n){return n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'k':n>=100?Math.round(n).toString():n.toFixed(1)}
@@ -538,7 +538,7 @@ function step(){
   computeLinks();updateCounts();
   const cs=G.countries;
   // alliance budgets
-  for(const a of G.alliances){if(a.alive&&isAI(a.id))aiPolicy(a)}
+  for(const a of G.alliances){if(!a.alive)continue;if(isAI(a.id))aiPolicy(a);else if(G.autoConv!==false)autoConvert(a)}
   // economy
   const E=ECOND();
   const liveC=cs.filter(c=>c.alive);const avgInc=Math.max(.01,liveC.reduce((t,c)=>t+c.income,0)/Math.max(1,liveC.length)*.1*E.income);
@@ -555,8 +555,8 @@ function step(){
     const mB=income*pol.mil/sum,eB=pol.eco/sum,sB=income*pol.sci/sum;
     c.army+=mB*E.milConv*X.milConv*K.troop*troopEff(c)-c.army*K.upkeep;
     // weapons program: turn up to 4% of the science stock per month into troops (scaled by the nation's economic weight)
-    c.lastConv=0;const conv=(al.policy.conv||0)/100;
-    if(conv>0&&c.sci>SCI_FLOOR){const d=Math.min(c.sci-SCI_FLOOR,c.sci*.04*conv);const gain=d*convRate(c,avgInc);c.sci-=d;c.army+=gain;c.lastConv=gain}
+    c.lastConv=c.convTurn===G.turn?c.burst||0:0;const conv=(al.policy.conv||0)/100;
+    if(conv>0&&c.sci>SCI_FLOOR){const d=Math.min(c.sci-SCI_FLOOR,c.sci*.04*conv);const gain=d*convRate(c,avgInc);c.sci-=d;c.army+=gain;c.lastConv+=gain}
     c.econ*=1+K.growth*eB*E.growth*X.growth*reg.grow;                     // grows by its own size, not the empire's
     c.lastResearch=sB*E.sciRate*X.sciRate/(K.R0*(1+K.Rs*c.sci));
     c.sci+=c.lastResearch;
@@ -588,11 +588,19 @@ function aiPolicy(a){
   p=state==='peace'?{mil:30,eco:40,sci:30}:state==='losing'?{mil:60,eco:20,sci:20}:{mil:45,eco:25,sci:30};
   if(G.settings.mil==='tech'){p.sci+=10;p.eco-=10}
   for(const c of mem){c.policy=smartSplit(c,state);if(G.settings.mil==='tech'){c.policy.sci+=8;c.policy.mil-=8}}
-  // At war the computer cashes science into troops (tested: this wins about 4 games in 5 against saving it),
-  // flat out unless it is clearly winning, and members on a front that is about to break convert at once.
-  p.conv=!war?0:enemy>mine*.8?100:60;
   a.policy=p;
-  if(war)for(const c of mem)if(threatOn(c)>1.2)convertNow(c);
+  autoConvert(a);
+}
+// Automatic weapons program, used by every computer alliance and by yours unless you switch it off.
+// At peace it saves science (every troop fights better). At war it cashes science into troops, flat out
+// unless the alliance is clearly winning, and any member whose front is about to break converts 15% at once.
+// Tested: this wins about 3 games in 4 against an alliance that only converts when losing.
+function autoConvert(a){
+  const mem=members(a.id);let mine=0,enemy=0,war=false;
+  for(const c of mem){mine+=pw(c);for(const l of adj[c.id]){const d=G.countries[l.d];if(d.alive&&atWar(a.id,d.alliance)){war=true;enemy+=pw(d)/2}}}
+  a.policy.conv=!war?0:enemy>mine*.8?100:60;
+  let g=0;const hit=[];if(war)for(const c of mem)if(threatOn(c)>1.2){const x=convertNow(c);if(x>0){g+=x;hit.push(c.name)}}
+  if(g&&a.id===G.playerAlliance)addLog(`Weapons program: ${hit.slice(0,3).join(', ')}${hit.length>3?'…':''} under heavy attack, converted science into ${fmt(g)} troops.`,'p');
 }
 
 function defMult(d){return MILD().def*(d.target<0?1.1:1)}
@@ -1175,11 +1183,10 @@ function renderCommand(el){
       <div class="slider"><span>Science</span><input type="range" id="pSci" min="0" max="100"><b class="mono" id="vSci"></b></div>
       <p class="muted small">The three sliders always add up to 100%: raising one takes from the other two. Military buys and maintains troops (each troop costs upkeep). Science makes every troop stronger. Economy grows the income that pays for both. To give one nation its own budget, open it in Intel.</p>
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-preset="70,15,15">War footing</button><button class="btn sm" data-preset="40,30,30">Balanced</button><button class="btn sm" data-preset="20,50,30">Growth</button><button class="btn sm" data-preset="25,20,55">Research</button></div>
-      <h3>Weapons program <span class="muted small" style="text-transform:none;letter-spacing:0">· science spent per month</span></h3>
+      <h3>Weapons program <span class="muted small" style="text-transform:none;letter-spacing:0">· science turned into troops</span></h3>
+      <label class="chk"><input type="checkbox" id="oAutoConv"> <span><b>Automatic</b> (recommended). At peace your science is saved, so every troop fights better. At war it's turned into troops, at full rate unless you're clearly winning, and any member about to be overrun converts extra at once.</span></label>
       <div class="slider"><span>Convert</span><input type="range" id="pConv" min="0" max="100" step="5"><b class="mono" id="vConv"></b></div>
-      <p class="muted small" id="convInfo">Turns stored science into troops right away. Each point of science you spend is gone, so every troop fights a little weaker afterwards.</p>
-      <div class="row"><button class="btn sm primary" id="convAll">Convert now: every member</button></div>
-      <p class="muted small" id="convAllInfo"></p>
+      <p class="muted small" id="convInfo"></p>
       <label class="chk"><input type="checkbox" id="oAuto"> <span>Auto-command members without orders</span></label>
       <label class="chk"><input type="checkbox" id="oPilot"> <span>Autopilot: let the AI run my whole alliance</span></label>
       <label class="chk"><input type="checkbox" id="oTailor"> <span><b>Tailor each nation's budget to its population and wealth</b>. Poor, populous nations mass troops; rich nations buy science. Moving a budget slider turns this off. Nations you gave their own budget in Intel keep it either way.</span></label>
@@ -1191,10 +1198,11 @@ function renderCommand(el){
       else if(G.tailor!==false){G.tailor=false;$('#oTailor').checked=false;toast('Tailored budgets off: every member without its own budget now uses these sliders')}
       ['mil','eco','sci'].forEach(k=>$('#p'+k[0].toUpperCase()+k.slice(1)).value=A.policy[k]);pctLabels();renderMembers();save()};
     [['#pMil','mil'],['#pEco','eco'],['#pSci','sci']].forEach(([s,k])=>$(s).oninput=()=>setPol(rebalance(normPol(G.alliances[G.playerAlliance].policy),k,+$(s).value)));
-    $('#pConv').oninput=()=>{if(G.autopilot){G.autopilot=false;$('#oPilot').checked=false}G.alliances[G.playerAlliance].policy.conv=+$('#pConv').value;pctLabels();save()};
+    $('#pConv').oninput=()=>{if(G.autopilot){G.autopilot=false;$('#oPilot').checked=false}
+      if(G.autoConv!==false){G.autoConv=false;$('#oAutoConv').checked=false;toast('Weapons program on manual: the slider sets the rate')}
+      G.alliances[G.playerAlliance].policy.conv=+$('#pConv').value;pctLabels();save()};
+    $('#oAutoConv').onchange=e=>{G.autoConv=e.target.checked;if(G.autoConv)autoConvert(G.alliances[G.playerAlliance]);save();renderPanel()};
     el.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const [m,e,s]=b.dataset.preset.split(',').map(Number);setPol({mil:m,eco:e,sci:s})});
-    $('#convAll').onclick=()=>{let g=0,n=0;for(const c of members(G.playerAlliance)){const x=convertNow(c);if(x>0){g+=x;n++}}
-      if(n){addLog(`Weapons program: ${n} member${n>1?'s':''} converted science into ${fmt(g)} troops.`,'p');toast(`+${fmt(g)} troops from science`)}else toast('Nothing to convert: already used this month, or science is at the minimum');save();renderPanel()};
     $('#oAuto').onchange=e=>{G.autoCommand=e.target.checked;save()};
     $('#oPilot').onchange=e=>{G.autopilot=e.target.checked;save();renderPanel()};
     $('#oPause').onchange=e=>{G.autoPause=e.target.checked;save()};
@@ -1208,12 +1216,11 @@ function renderCommand(el){
   const A2=G.alliances[G.playerAlliance];
   const ae=document.activeElement;
   if(!holding($('#cmdRoot'))){const np=normPol(A2.policy);$('#pMil').value=np.mil;$('#pEco').value=np.eco;$('#pSci').value=np.sci;$('#pConv').value=A2.policy.conv||0}
-  ['#pMil','#pEco','#pSci','#pConv','#convAll'].forEach(s=>$(s).disabled=false);
+  ['#pMil','#pEco','#pSci','#pConv'].forEach(s=>$(s).disabled=false);$('#oAutoConv').checked=G.autoConv!==false;
   {const mem=members(G.playerAlliance);const gain=mem.reduce((t,c)=>t+(c.lastConv||0),0);const avgSci=mem.reduce((t,c)=>t+c.sci,0)/Math.max(1,mem.length);
    const avgTm=mem.reduce((t,c)=>t+tm(c),0)/Math.max(1,mem.length);
-   {const ready=mem.filter(c=>c.convTurn!==G.turn&&convNowAmt(c)>.001);const est=ready.reduce((t,c)=>t+convNowAmt(c)*convRate(c),0);
-    $('#convAllInfo').textContent=ready.length?`One-off, once a month per nation: spends ${Math.round(CONV_NOW*100)}% of each member's science for about +${fmt(est)} troops now.`:'Used this month. Available again next month.'}
-   $('#convInfo').textContent=(A2.policy.conv?`Last month: +${fmt(gain)} troops from science. `:'Off. ')+`Alliance average science ${avgSci.toFixed(2)} (×${avgTm.toFixed(2)} in battle). Spent science is gone, so every troop fights a little weaker afterwards.`}
+   const auto=G.autoConv!==false;
+   $('#convInfo').textContent=(auto?(A2.policy.conv?`Automatic: at war, converting at ${A2.policy.conv}%. `:'Automatic: at peace, saving science. '):'Manual. ')+(gain?`Last month: +${fmt(gain)} troops from science. `:'')+`Alliance average science ${avgSci.toFixed(2)} (×${avgTm.toFixed(2)} in battle). Spent science is gone, so every troop fights a little weaker afterwards.`}
   {const h=G.countries[G.playerCountry];if(document.activeElement!==$('#cMyEcon'))$('#cMyEcon').value=h.econType||'mixed';
    const left=(G.econChanged||-99)+6-G.turn;$('#cMyEconD').textContent=NATION_ECON[h.econType||'mixed'].desc+(left>0?` Locked for ${left} more month${left>1?'s':''}.`:' You can switch every 6 months.')}
   pctLabels();
@@ -1268,16 +1275,15 @@ function renderIntel(el){
       <dt>Troops per $</dt><dd>×${troopEff(c).toFixed(2)} (cheap labour = more)</dd><dt>Research</dt><dd>+${(c.lastResearch||0).toFixed(3)} science/mo</dd>
       <dt>Budget now</dt><dd>${budgetStr(cur)} mil/eco/sci</dd><dt>Best for it</dt><dd>${budgetStr(rec)} mil/eco/sci</dd></dl>
       <p class="small muted">${troopEff(c)>1.15?'Cheap labour: troops are this nation\'s best buy.':wealthRatio(c)>1.6?'Rich: science multiplies its whole army cheaply.':'Middle of the pack: a mixed budget works best.'}</p>`;
-    if(c.alliance===pa&&!G.autopilot){const p=normPol(cur);const amt=convNowAmt(c),used=c.convTurn===G.turn;
+    if(c.alliance===pa&&!G.autopilot){const p=normPol(cur);
       h+=`<h3>Budget for ${esc(c.name)} <span class="muted small" style="text-transform:none;letter-spacing:0">· ${c.ownPol?'its own budget':G.tailor!==false?'tailored automatically':'alliance budget'}</span></h3>
       <div class="slider"><span>Military</span><input type="range" data-np="mil" min="0" max="100" value="${p.mil}"><b class="mono" data-npv="mil">${p.mil}%</b></div>
       <div class="slider"><span>Economy</span><input type="range" data-np="eco" min="0" max="100" value="${p.eco}"><b class="mono" data-npv="eco">${p.eco}%</b></div>
       <div class="slider"><span>Science</span><input type="range" data-np="sci" min="0" max="100" value="${p.sci}"><b class="mono" data-npv="sci">${p.sci}%</b></div>
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-nrec="1">Use best for it (${budgetStr(rec)})</button>${c.ownPol?'<button class="btn sm" data-nreset="1">Back to alliance budget</button>':''}</div>
-      <h3>Convert science to military</h3>
-      <dl class="kv"><dt>Science stock</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd><dt>Rate</dt><dd>1 science → ${fmt(convRate(c))} troops</dd></dl>
-      <div class="row" style="margin-top:6px"><button class="btn sm primary" data-nconv="1" ${used||amt<=.001?'disabled':''}>Convert ${amt.toFixed(2)} science → +${fmt(amt*convRate(c))} troops</button></div>
-      <p class="small muted">${used?'Already converted this month. ':''}Spends ${Math.round(CONV_NOW*100)}% of this nation's science once a month. Battle strength drops to ×${tm({...c,sci:c.sci-amt}).toFixed(2)}. The Convert slider in Command does this gradually for the whole alliance.</p>`}}
+      <h3>Science into military</h3>
+      <dl class="kv"><dt>Science stock</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd><dt>Rate</dt><dd>1 science → ${fmt(convRate(c))} troops</dd><dt>Last month</dt><dd>${c.lastConv?'+'+fmt(c.lastConv)+' troops':'none'}</dd></dl>
+      <p class="small muted">${G.autoConv!==false?'Automatic: converts at war, saves science at peace, and converts extra when this nation is about to be overrun.':'Manual: uses the Convert slider in Command.'} Richer nations get more troops per point of science.</p>`}}
   h+=`<h3>Street ledger</h3><dl class="kv"><dt>Home streets held</dt><dd>${home} / ${c.origCells}</dd><dt>Occupied streets</dt><dd>${occ}</dd></dl>`+
     (lostList?`<p class="small"><span class="muted">Lost to:</span> ${lostList}</p>`:'')+(heldList?`<p class="small"><span class="muted">Holds from:</span> ${heldList}</p>`:'');
   if(c.alive&&!G.over){
@@ -1305,7 +1311,6 @@ function renderIntel(el){
   el.querySelectorAll('[data-np]').forEach(s=>s.onchange=()=>{s.blur();save();renderPanel()});
   const nr=el.querySelector('[data-nrec]');if(nr)nr.onclick=()=>{const r=smartSplit(c,'war');c.ownPol={mil:r.mil,eco:r.eco,sci:r.sci};save();renderPanel()};
   const nx=el.querySelector('[data-nreset]');if(nx)nx.onclick=()=>{delete c.ownPol;save();renderPanel()};
-  const nc=el.querySelector('[data-nconv]');if(nc)nc.onclick=()=>{const g=convertNow(c);if(g>0){addLog(`${c.name} converted science into ${fmt(g)} troops.`,'p');toast(`${c.name}: +${fmt(g)} troops`)}save();renderPanel()};
   el.querySelectorAll('[data-ord]').forEach(b=>b.onclick=()=>{c.order=+b.dataset.ord;if(c.order>=0)addLog(`${c.name} ordered to attack ${cs[c.order].name}.`,'p');chooseTargetsPreview();save();renderPanel()});
   const aw=el.querySelector('[data-allywar]');if(aw)aw.onclick=()=>warOnAlly(c);
   const dc=el.querySelector('[data-decl]');if(dc)dc.onclick=()=>{if((G.truce[wkey(c.alliance,pa)]||0)>G.turn)addLog(`You broke the truce with the ${al.name}.`,'bad');declareWar(pa,c.alliance);toast(`War declared on the ${al.name}`);save();refreshUI()};
@@ -1352,7 +1357,7 @@ function renderGuide(el){
     <li><b>Goal:</b> your alliance must control ${G.settings.win}% of the world's streets before the ${G.settings.len}-minute clock runs out. When time runs out, the alliance with the most land wins.</li>
     <li><b>Budget balance:</b> military money buys troops, science makes every troop stronger, economy grows the income that pays for both. The best mix depends on the nation: poor, populous nations get the most soldiers per dollar, while rich nations research fastest because research has a fixed price. Leave <i>tailor each nation's budget</i> on and each member uses its best mix. The Intel tab ranks every nation by wealth.</li>
     <li><b>Allies can turn on each other:</b> any nation can declare war on anyone, even its own ally. Computer nations sometimes attack a much weaker ally next door, especially Opportunists and alliances with no outside enemies left. The alliance then fractures by foreign policy.</li>
-    <li><b>Weapons program:</b> the Convert slider spends up to 4% of your stored science each month to raise troops at once. <i>Convert now</i> (in Command for every member, or in Intel for one nation) spends 15% at once, once a month. You get more soldiers now, but every troop is weaker afterwards. Balance it against the Military, Economy and Science budget.</li>
+    <li><b>Weapons program:</b> on <i>Automatic</i> (the default), science is saved at peace and turned into troops at war, with extra conversions for any member about to be overrun. Rich nations get the most troops per point of science, so for them a big Science budget is also the fastest way to a big army. Move the Convert slider to set the rate yourself.</li>
     <li><b>Budget:</b> set Military / Economy / Science in Command (they always add up to 100%), or give one nation its own budget in Intel. Money comes from the streets you hold. Occupied streets pay 70%.</li>
     <li><b>Click any nation</b> to see its name, alliance and capital, and to declare war, offer peace or launch an attack from that card. You can even declare war on one of your own allies: it gets expelled and your alliance fractures by foreign policy.</li>
     <li><b>Orders:</b> tap one of your nations, then an enemy (or tap an enemy and press <i>Send</i>). Several members hitting one target split its defence, so focused attacks win.</li>
