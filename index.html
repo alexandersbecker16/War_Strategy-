@@ -10,6 +10,7 @@
 /* Layout: war-room console. Full-bleed map on the left, command panel on the right (stacked under the map on phones). */
 :root{
   --ocean:#07111b; --bg:#0b1622; --panel:#0e1b29; --raised:#14263a; --line:#21374f;
+  --home:#a259ff; --home-ink:#c9a2ff;
   --ink:#dbe6f0; --muted:#8398ad; --amber:#f2b33d; --red:#ff6159; --green:#47c98b;
   --display:'Chakra Petch',system-ui,sans-serif; --body:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
   color-scheme:dark;
@@ -82,6 +83,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .pill.war{color:var(--red);border-color:rgba(255,97,89,.5)}
 .pill.peace{color:var(--green);border-color:rgba(71,201,139,.45)}
 .pill.you{color:var(--amber);border-color:rgba(242,179,61,.55)}
+.pill.home{color:var(--home-ink);border-color:rgba(162,89,255,.65);background:rgba(162,89,255,.14)}
+.card.home{border-color:rgba(162,89,255,.75);box-shadow:inset 3px 0 0 var(--home)}
 .bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%}
 .slider{display:grid;grid-template-columns:78px 1fr 44px;gap:10px;align-items:center;margin:8px 0}
@@ -152,7 +155,7 @@ ol,ul{padding-left:20px;margin:6px 0} li{margin:4px 0}
       </div>
       <div class="body" id="setup">
         <h2>Draft the world</h2>
-        <p class="muted small">The real world map is carved into random nations. Each nation inherits strengths from the modern demographic bloc it sits in (North Atlantic, East Asia, the Gulf, Sub-Saharan Africa and so on), and the alliances are balanced so every bloc starts with exactly equal combined military, economic and scientific strength.</p>
+        <p class="muted small">The real world map is carved into random nations. Every nation starts with exactly the same population, income, science and military, and every alliance has the same number of nations. A nation's modern demographic bloc (North Atlantic, East Asia, the Gulf, Sub-Saharan Africa and so on) sets its growth rate and foreign policy. Your home nation is shown in purple.</p>
         <div class="grid2">
           <label class="f"><span>Map size</span><select id="sMap"><option value="small">Small (fast)</option><option value="medium" selected>Medium (HD)</option><option value="large">Large (HD)</option><option value="huge">Huge (ultra HD)</option></select></label>
           <label class="f"><span>Nations</span><select id="sCountries"><option>20</option><option>28</option><option selected>36</option><option>48</option></select></label>
@@ -167,7 +170,7 @@ ol,ul{padding-left:20px;margin:6px 0} li{margin:4px 0}
           <label class="f"><span>Surrender at</span><select id="sCap"><option value="0.25" selected>25% left</option><option value="0.4">40% left (fast)</option></select></label>
         </div>
         <label class="f"><span>Clock</span><select id="sClock"><option value="strict" selected>Runs while paused (hard limit)</option><option value="play">Stops while paused</option></select></label>
-        <div class="card you" id="youCard"></div>
+        <div class="card home" id="youCard"></div>
         <label class="f"><span>Your nation's economy</span><select id="sMyEcon"></select><div class="desc" id="dMyEcon"></div></label>
         <h3>Alliances at the start</h3>
         <div id="alliPreview"></div>
@@ -1002,7 +1005,7 @@ function renderOff(){
   if(!off||off.width!==RW){off=document.createElement('canvas');off.width=RW;off.height=H*S;octx=off.getContext('2d');img=octx.createImageData(RW,H*S)}
   const d=img.data,own=G.owner,org=WD.origin,cs=G.countries;
   const col=cs.map(c=>{let rgb=countryRGB(c);if(c.id===G.sel&&c.id!==G.playerCountry)rgb=rgb.map(v=>Math.min(255,v*1.25+30));return rgb});
-  const alOf=cs.map(c=>c.alliance);
+  const alOf=cs.map(c=>c.alliance);const home=G.playerCountry;
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,o=own[i];
     let r,g,b,br,bg,bb,rd=false,dd=false,lineR,lineD;
     if(o<0){const h=hash32(i)&15,cw=WD.coastWater[i];r=8+h*.25;g=20+h*.35+(cw?9:0);b=33+h*.55+(cw?16:0);
@@ -1011,7 +1014,7 @@ function renderOff(){
     if(org[i]!==o&&((x+y)&1)){r*=.72;g*=.72;b*=.72}
     if(G.started&&G.turn-G.cap[i]<=1){r=r*.4+255*.6;g=g*.4+236*.6;b=b*.4+190*.6}
     const ro=x+1<W?own[i+1]:-1,doo=y+1<H?own[i+W]:-1;
-    const edge=(p)=>p<0?null:p===o?null:(alOf[p]!==alOf[o]?[10,14,20]:[r*.5,g*.5,b*.5]);
+    const edge=(p)=>p<0?null:p===o?null:(o===home||p===home)?[226,204,255]:(alOf[p]!==alOf[o]?[10,14,20]:[r*.5,g*.5,b*.5]);
     lineR=edge(ro);lineD=edge(doo);
     for(let py=0;py<S;py++){let p=((y*S+py)*RW+x*S)*4;
       for(let px=0;px<S;px++,p+=4){
@@ -1054,7 +1057,7 @@ function draw(){
     if(x<-50||y<-50||x>cv.width+50||y>cv.height+50)continue;
     const isCap=capSet.has(ct.cell);const big=ct.pop>=8;
     if(isCap){const s=Math.max(2.5*dpr,Math.min(cell*.6,5*dpr));ctx.fillStyle='#0a0f16';ctx.fillRect(x-s-1,y-s-1,2*s+2,2*s+2);ctx.fillStyle='#e9eef4';ctx.fillRect(x-s,y-s,2*s,2*s);
-      if(G.owner[ct.cell]===G.playerCountry&&G.countries[G.playerCountry].capital===ct.cell){ctx.strokeStyle='#f2b33d';ctx.lineWidth=2*dpr;ctx.beginPath();ctx.arc(x,y,s+5*dpr,0,7);ctx.stroke()}}
+      if(G.owner[ct.cell]===G.playerCountry&&G.countries[G.playerCountry].capital===ct.cell){ctx.strokeStyle='#c9a2ff';ctx.lineWidth=2.4*dpr;ctx.beginPath();ctx.arc(x,y,s+5*dpr,0,7);ctx.stroke()}}
     else{const r=Math.max(1.6*dpr,Math.min(cell*.35,3.5*dpr));ctx.fillStyle='#0a0f16';ctx.beginPath();ctx.arc(x,y,r+1*dpr,0,7);ctx.fill();ctx.fillStyle=big?'#f4f7fa':'#c9d4de';ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}
     const show=isCap?view.z>=1.8||k*S>=6:big?view.z>=2.6:view.z>=4.2;
     if(show){const fs=Math.round((isCap?10.5:9.5)*dpr);ctx.font=`${isCap?600:500} ${fs}px "IBM Plex Sans",system-ui,sans-serif`;
@@ -1123,7 +1126,7 @@ function showPop(i,e){
   popCell=i;if(e)popXY=[e.clientX,e.clientY];
   const k=wkey(c.alliance,pa),truce=(G.truce[k]||0)>G.turn,war=atWar(pa,c.alliance),mine=c.alliance===pa;
   let rel,acts='';
-  if(mine)rel=`<span class="pill you">${c.id===G.playerCountry?'your home nation':'your alliance'}</span>`;
+  if(mine)rel=c.id===G.playerCountry?'<span class="pill home">your home nation</span>':'<span class="pill you">your alliance</span>';
   else if(war)rel='<span class="pill war">at war with you</span>';
   else rel=`<span class="pill peace">${truce?'truce until '+dateStr(G.truce[k]):'at peace with you'}</span>`;
   if(G.started&&!G.over&&mine&&c.id!==G.playerCountry&&c.alive)acts=`<button class="btn danger" data-pa="allywar">Declare war on ally</button>`;
@@ -1266,12 +1269,12 @@ function renderCommand(el){
   const mem=members(G.playerAlliance).sort((x,y)=>pw(y)-pw(x));
   renderMembers();
   $('#cmdYou').innerHTML=`<div class="row" style="justify-content:space-between"><div><div class="small muted">You command</div><h2><span class="sw" style="background:${allyColor(A2)}"></span> ${esc(A2.name)}</h2></div><span class="pill you">${shareOf(G.playerAlliance).toFixed(1)}% of world</span></div>
-    <p class="small">Home nation <b>${esc(home.name)}</b> · ${mem.length} member${mem.length!==1?'s':''} · power ${fmt(alliancePower(G.playerAlliance))} · at war with ${G.alliances.filter(a=>a.alive&&atWar(a.id,G.playerAlliance)).length} alliance(s)</p>`;
+    <p class="small">Home nation <span class="sw" style="background:${HOME_COLOR}"></span> <b style="color:var(--home-ink)">${esc(home.name)}</b> · ${mem.length} member${mem.length!==1?'s':''} · power ${fmt(alliancePower(G.playerAlliance))} · at war with ${G.alliances.filter(a=>a.alive&&atWar(a.id,G.playerAlliance)).length} alliance(s)</p>`;
 }
 function renderMembers(){const el=$('#cmdMembers');if(!el)return;const mem=members(G.playerAlliance).sort((x,y)=>pw(y)-pw(x));
   el.innerHTML=mem.map(c=>{const st=statusOf(c);const ordered=c.order>=0?'order':c.order===-2?'hold':'auto';
     return`<div class="li" data-c="${c.id}"><span class="sw" style="background:rgb(${countryRGB(c).join(',')})"></span>
-      <div class="nm"><b>${esc(c.name)}</b>${c.id===G.playerCountry?' <span class="pill you">home</span>':''}<div class="sub">${esc(st)} · ${ordered} · ${wealthClass(c)} · ${budgetStr(polOf(c))}${c.ownPol?' (own)':''} mil/eco/sci</div></div>
+      <div class="nm"><b>${esc(c.name)}</b>${c.id===G.playerCountry?' <span class="pill home">home</span>':''}<div class="sub">${esc(st)} · ${ordered} · ${wealthClass(c)} · ${budgetStr(polOf(c))}${c.ownPol?' (own)':''} mil/eco/sci</div></div>
       <div class="mono small" style="text-align:right">${fmt(c.army)} army<div class="sub">${c.cells} streets</div></div></div>`}).join('')||'<p class="muted">No member nations left.</p>';
 }
 function fmtPop(n){return n>=1e7?(n/1e6).toFixed(0)+'M':n>=1e6?(n/1e6).toFixed(1)+'M':Math.round(n/1e3)+'k'}
@@ -1285,7 +1288,7 @@ function wealthTable(){const cs=G.countries.filter(c=>c.alive).sort((a,b)=>total
   const open=G.wealthOpen!==false;
   return`<details id="wealthBox" ${open?'open':''} style="margin-bottom:10px"><summary style="cursor:pointer"><h3 style="display:inline">Total wealth by nation</h3> <span class="small muted">· world ${fmtMoney(world)} · your alliance ${(mine/world*100).toFixed(1)}%</span></summary>
     <div style="overflow-x:auto;max-height:46vh;overflow-y:auto"><table><tr><th>#</th><th>Nation</th><th style="text-align:right">Total wealth</th><th style="text-align:right">Share</th><th style="text-align:right">Income</th><th style="text-align:right">Pop.</th></tr>${cs.map((c,i)=>{const w=totalWealth(c),sh=w/world*100;
-    return`<tr data-wrow="${c.id}" style="cursor:pointer${c.id===G.sel?';background:rgba(255,255,255,.07)':''}"><td class="n">${i+1}</td><td style="white-space:nowrap" title="${wealthClass(c)}"><span class="sw" style="background:rgb(${countryRGB(c).join(',')})"></span> ${esc(c.name)}${c.id===G.playerCountry?' ★':''}</td><td class="n"><b>${fmtMoney(w)}</b></td><td class="n">${sh.toFixed(1)}%</td><td class="n">${(c.lastIncome||0).toFixed(1)}</td><td class="n">${fmtPop(c.popNow||c.pop)}</td></tr>`}).join('')}</table></div>
+    return`<tr data-wrow="${c.id}" style="cursor:pointer${c.id===G.sel?';background:rgba(255,255,255,.07)':''}"><td class="n">${i+1}</td><td style="white-space:nowrap" title="${wealthClass(c)}"><span class="sw" style="background:rgb(${countryRGB(c).join(',')})"></span> ${c.id===G.playerCountry?`<b style="color:var(--home-ink)">${esc(c.name)}</b> ★`:esc(c.name)}</td><td class="n"><b>${fmtMoney(w)}</b></td><td class="n">${sh.toFixed(1)}%</td><td class="n">${(c.lastIncome||0).toFixed(1)}</td><td class="n">${fmtPop(c.popNow||c.pop)}</td></tr>`}).join('')}</table></div>
     <p class="small muted">Total wealth = a year of income plus the value of the home economy. Income is per month. High income means fast research; a big population on low income means cheap troops. Tap a row to open that nation.</p></details>`}
 function bindWealth(el){el.querySelectorAll('[data-wrow]').forEach(r=>r.onclick=()=>{G.sel=+r.dataset.wrow;G.dirty=true;renderPanel()});
   const d=el.querySelector('#wealthBox');if(d)d.ontoggle=()=>{G.wealthOpen=d.open}}
@@ -1298,7 +1301,8 @@ function renderIntel(el){
   for(let i=0;i<own.length;i++){if(org[i]===c.id){if(own[i]===c.id)home++;else lostTo[own[i]]=(lostTo[own[i]]||0)+1}else if(own[i]===c.id){occ++;heldFrom[org[i]]=(heldFrom[org[i]]||0)+1}}
   const lostList=Object.entries(lostTo).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${esc(cs[k].name)} ${v}`).join(' · ');
   const heldList=Object.entries(heldFrom).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`${esc(cs[k].name)} ${v}`).join(' · ');
-  let h=wealthTable()+`<div class="card ${c.alliance===pa?'you':''}"><div class="small muted">${esc(reg.name)}</div><h2>${esc(c.name)}${c.alive?'':' <span class="pill war">annexed</span>'}</h2>
+  const isHome=c.id===G.playerCountry;
+  let h=wealthTable()+`<div class="card ${isHome?'home':c.alliance===pa?'you':''}"><div class="small muted">${esc(reg.name)}</div><h2>${isHome?`<span class="sw" style="background:${HOME_COLOR}"></span> `:''}${esc(c.name)}${isHome?' <span class="pill home">your home nation</span>':''}${c.alive?'':' <span class="pill war">annexed</span>'}</h2>
     <p class="small"><span class="sw" style="background:${allyColor(al)}"></span> ${esc(al.name)} ${c.alliance===pa?'<span class="pill you">your alliance</span>':atWar(pa,c.alliance)?'<span class="pill war">at war</span>':'<span class="pill peace">at peace</span>'}</p></div>`;
   if(c.alive)h+=`<dl class="kv"><dt>Army</dt><dd>${fmt(c.army)}</dd><dt>Combat power</dt><dd>${fmt(pw(c))}</dd><dt>Economy</dt><dd>${fmt(c.econ)} (income ${(c.lastIncome||0).toFixed(1)}/mo)</dd>
     <dt>Science</dt><dd>${c.sci.toFixed(2)} (×${tm(c).toFixed(2)} in battle)</dd>${c.lastConv?`<dt>Weapons program</dt><dd>+${fmt(c.lastConv)} troops/mo from science</dd>`:''}
@@ -1431,7 +1435,7 @@ function renderSetupInfo(){
   const pa=G.playerAlliance,me=G.countries[G.playerCountry],reg=REGIONS.find(r=>r.key===me.region);
   const cs=G.countries,n=cs.length;
   const means={a:cs.reduce((s,c)=>s+c.army,0)/n,e:cs.reduce((s,c)=>s+c.econ,0)/n,s:cs.reduce((s,c)=>s+c.sci,0)/n};
-  $('#youCard').innerHTML=`<div class="small muted">You are assigned</div><h2>${esc(me.name)}</h2><p class="small">Capital ${esc(me.capName)} · ${esc(reg.name)} · ${me.fp} · in the <span class="sw" style="background:${allyColor(pa)}"></span> <b>${esc(G.alliances[pa].name)}</b></p><p class="small muted">You will command the whole alliance. Every other alliance is run by the computer.</p>`;
+  $('#youCard').innerHTML=`<div class="small muted">You are assigned</div><h2><span class="sw" style="background:${HOME_COLOR}"></span> ${esc(me.name)} <span class="pill home">home</span></h2><p class="small">Capital ${esc(me.capName)} · ${esc(reg.name)} · ${me.fp} · in the <span class="sw" style="background:${allyColor(pa)}"></span> <b>${esc(G.alliances[pa].name)}</b></p><p class="small muted">You will command the whole alliance. Every other alliance is run by the computer.</p>`;
   {const E=ECOND();const tot=landTotal();
   $('#alliPreview').innerHTML=`<table><tr><th>Alliance</th><th style="text-align:right">Land</th><th style="text-align:right">Income</th><th style="text-align:right">Power</th><th style="text-align:right">Science</th></tr>`+
     G.alliances.map(a=>{const m=cs.filter(c=>c.alliance===a.id);
