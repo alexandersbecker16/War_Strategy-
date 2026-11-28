@@ -402,7 +402,10 @@ function strengthOf(c,means){return .4*c.army/means.a+.35*c.econ/means.e+.25*c.s
 function assignAlliances(countries,nA,rng,W){
   const n=countries.length;
   const means={a:countries.reduce((s,c)=>s+c.army,0)/n,e:countries.reduce((s,c)=>s+c.econ,0)/n,s:countries.reduce((s,c)=>s+c.sci,0)/n};
-  const st=countries.map(c=>strengthOf(c,means));
+  // group nations so every alliance gets about the same land (streets) and a similar number of members;
+  // military, economy and science are equalised exactly afterwards, so land is what the grouping must balance
+  const mC=countries.reduce((s,c)=>s+c.origCells,0)/n;
+  const st=countries.map(c=>.8*c.origCells/mC+.2);
   const pos=countries.map(c=>[c.cx,c.cy]);
   const d2=(i,j)=>{const dx=pos[i][0]-pos[j][0],dy=pos[i][1]-pos[j][1];return dx*dx+dy*dy};
   const al=new Array(n).fill(-1);
@@ -415,12 +418,22 @@ function assignAlliances(countries,nA,rng,W){
     let best=-1,bd=1e18;for(let i=0;i<n;i++){if(al[i]>=0)continue;const md=Math.min(...mem[a].map(m=>d2(i,m)));if(md<bd){bd=md;best=i}}
     al[best]=a;tot[a]+=st[best];mem[a].push(best);left--}
   // refine toward equal totals
-  for(let it=0;it<400;it++){let hi=0,lo=0;for(let k=1;k<nA;k++){if(tot[k]>tot[hi])hi=k;if(tot[k]<tot[lo])lo=k}
-    const gap=tot[hi]-tot[lo];if(gap<.01*tot[hi])break;
+  for(let it=0;it<1500;it++){let hi=0,lo=0;for(let k=1;k<nA;k++){if(tot[k]>tot[hi])hi=k;if(tot[k]<tot[lo])lo=k}
+    const gap=tot[hi]-tot[lo];if(gap<.005*tot[hi])break;
     let best=-1,bs=1e18;for(const i of mem[hi]){if(mem[hi].length<2)break;if(st[i]>=gap)continue;
       const md=Math.sqrt(Math.min(...mem[lo].map(m=>d2(i,m))));const sc=Math.abs(st[i]-gap/2)+.004*md;if(sc<bs){bs=sc;best=i}}
     if(best<0)break;mem[hi].splice(mem[hi].indexOf(best),1);mem[lo].push(best);al[best]=lo;tot[hi]-=st[best];tot[lo]+=st[best];}
+  // swap pass: trade one nation each way between the largest and smallest alliance when that narrows the gap
+  for(let it=0;it<300;it++){let hi=0,lo=0;for(let k=1;k<nA;k++){if(tot[k]>tot[hi])hi=k;if(tot[k]<tot[lo])lo=k}
+    const gap=tot[hi]-tot[lo];let best=null,bg=gap;
+    const near=(i,grp,skip)=>Math.sqrt(Math.min(...grp.filter(m=>m!==skip).map(m=>d2(i,m))));const R=W/4;
+    for(const i of mem[hi])for(const j of mem[lo]){const d=st[i]-st[j];if(d<=0)continue;const ng=Math.abs(gap-2*d);
+      if(ng<bg-1e-9&&near(i,mem[lo],j)<R&&near(j,mem[hi],i)<R){bg=ng;best=[i,j,d]}}
+    if(!best||bg>=gap*.98)break;const [i,j,d]=best;
+    mem[hi].splice(mem[hi].indexOf(i),1);mem[lo].splice(mem[lo].indexOf(j),1);mem[hi].push(j);mem[lo].push(i);al[i]=lo;al[j]=hi;tot[hi]-=d;tot[lo]+=d}
+  for(let i=0;i<n;i++)countries[i].alliance=al[i];
   // exact equalisation: scale each alliance's members so every alliance total is identical
+  const tot2=new Array(nA).fill(0);for(let i=0;i<n;i++)tot2[al[i]]+=strengthOf(countries[i],means);for(let a=0;a<nA;a++)tot[a]=tot2[a];
   const target=tot.reduce((a,b)=>a+b,0)/nA;
   for(let i=0;i<n;i++){const f=target/tot[al[i]];const c=countries[i];c.army*=f;c.econ*=f;c.sci*=f;c.alliance=al[i]}
   // second pass: also equalise battlefield power (army x tech) while keeping every strength index identical
@@ -453,6 +466,21 @@ function newWorld(settings,seed){
   mark=new Uint32Array(WD.N);
   assignPlayer();
   computeLinks();updateCounts();
+  equalizeStart();
+}
+// Every alliance starts with exactly the same real income (cities, trade bonus and all), the same average
+// science and the same combat power. Nations inside an alliance still differ (rich and poor, big and small),
+// so how you use them is what decides the war.
+function equalizeStart(){
+  const E=ECOND(),al=G.alliances,cs=G.countries,nA=al.length;
+  const mem=al.map(a=>cs.filter(c=>c.alliance===a.id));
+  const incOf=m=>m.reduce((t,c)=>t+c.income*.1*E.income*NE(c).income,0)*(1+E.trade*Math.min(1,(m.length-1)/4));
+  const avg=f=>mem.reduce((t,m)=>t+f(m),0)/nA;
+  const sciAvg=m=>m.reduce((t,c)=>t+c.sci,0)/m.length,tS=avg(sciAvg);
+  mem.forEach(m=>{const f=tS/sciAvg(m);for(const c of m)c.sci*=f});
+  for(let pass=0;pass<2;pass++){const tI=avg(incOf);mem.forEach(m=>{const f=tI/Math.max(1e-9,incOf(m));for(const c of m)c.econ*=f});updateCounts()}
+  const powOf=m=>m.reduce((t,c)=>t+pw(c),0),tP=avg(powOf);
+  mem.forEach(m=>{const f=tP/Math.max(1e-9,powOf(m));for(const c of m)c.army*=f});
 }
 function assignPlayer(){
   const a=(rnd()*G.alliances.length)|0;const mem=G.countries.filter(c=>c.alliance===a).sort((x,y)=>y.econ-x.econ);
@@ -1395,12 +1423,14 @@ function renderSetupInfo(){
   const cs=G.countries,n=cs.length;
   const means={a:cs.reduce((s,c)=>s+c.army,0)/n,e:cs.reduce((s,c)=>s+c.econ,0)/n,s:cs.reduce((s,c)=>s+c.sci,0)/n};
   $('#youCard').innerHTML=`<div class="small muted">You are assigned</div><h2>${esc(me.name)}</h2><p class="small">Capital ${esc(me.capName)} · ${esc(reg.name)} · ${me.fp} · in the <span class="sw" style="background:${allyColor(pa)}"></span> <b>${esc(G.alliances[pa].name)}</b></p><p class="small muted">You will command the whole alliance. Every other alliance is run by the computer.</p>`;
-  $('#alliPreview').innerHTML=`<table><tr><th>Alliance</th><th style="text-align:right">Military</th><th style="text-align:right">Economy</th><th style="text-align:right">Science</th><th style="text-align:right">Total</th></tr>`+
-    G.alliances.map(a=>{const m=cs.filter(c=>c.alliance===a.id);const mil=m.reduce((s,c)=>s+c.army,0)/means.a,eco=m.reduce((s,c)=>s+c.econ,0)/means.e,sci=m.reduce((s,c)=>s+c.sci,0)/means.s;
+  {const E=ECOND();const tot=landTotal();
+  $('#alliPreview').innerHTML=`<table><tr><th>Alliance</th><th style="text-align:right">Land</th><th style="text-align:right">Income</th><th style="text-align:right">Power</th><th style="text-align:right">Science</th></tr>`+
+    G.alliances.map(a=>{const m=cs.filter(c=>c.alliance===a.id);
+      const inc=m.reduce((t,c)=>t+c.income*.1*E.income*NE(c).income,0)*(1+E.trade*Math.min(1,(m.length-1)/4));
       const regs=[...new Set(m.map(c=>REGIONS.find(r=>r.key===c.region).name))];
       return`<tr><td><span class="sw" style="background:${allyColor(a)}"></span> <b>${esc(a.name)}</b>${a.id===pa?' <span class="pill you">you</span>':''}<div class="small muted">${m.length} nations · ${esc(regs.slice(0,3).join(', '))}${regs.length>3?'…':''}</div></td>
-      <td class="n">${(mil*.4).toFixed(2)}</td><td class="n">${(eco*.35).toFixed(2)}</td><td class="n">${(sci*.25).toFixed(2)}</td><td class="n"><b>${(mil*.4+eco*.35+sci*.25).toFixed(2)}</b></td></tr>`}).join('')+
-    `</table><p class="small muted">Strength index = 40% military + 35% economy + 25% science. Tap a nation on the map to inspect it.</p>`;
+      <td class="n">${(m.reduce((t,c)=>t+c.cells,0)/tot*100).toFixed(1)}%</td><td class="n">${inc.toFixed(1)}</td><td class="n">${fmt(m.reduce((t,c)=>t+pw(c),0))}</td><td class="n">${(m.reduce((t,c)=>t+c.sci,0)/m.length).toFixed(2)}</td></tr>`}).join('')+
+    `</table><p class="small muted">Every alliance starts with the same income (per month), combat power and average science, and close to the same land. Its nations still differ, so strategy decides the war. Tap a nation on the map to inspect it.</p>`}
   if(G.sel>=0&&G.sel!==G.playerCountry){const c=cs[G.sel];$('#youCard').innerHTML+=`<p class="small" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">Selected: <b>${esc(c.name)}</b> (capital ${esc(c.capName)}) · ${esc(REGIONS.find(r=>r.key===c.region).name)} · ${c.fp} · army ${fmt(c.army)} · econ ${fmt(c.econ)} · sci ${c.sci.toFixed(1)}</p>`}
   legend();needDraw=true;
 }
